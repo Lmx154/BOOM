@@ -7,10 +7,11 @@ import AccelerationChart from './components/Charts/AccelerationChart';
 import CommandPanel from './components/Command/CommandPanel';
 import GPSMap from './components/Map/GPSMap';
 import RocketOrientation from './components/3D/RocketOrientation';
+import SimulationPanel from './components/Simulation/SimulationPanel';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'map' | 'command'>('telemetry');
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'map' | 'command' | 'simulation'>('telemetry');
   const { connectionStatus, setConnectionStatus, updateTelemetry, addEvent } = useTelemetryStore();
 
   useEffect(() => {
@@ -78,12 +79,17 @@ function App() {
           onClick={() => setActiveTab('map')}
         >
           Map
-        </button>
-        <button 
+        </button>        <button 
           className={activeTab === 'command' ? 'active' : ''}
           onClick={() => setActiveTab('command')}
         >
           Command
+        </button>
+        <button 
+          className={activeTab === 'simulation' ? 'active' : ''}
+          onClick={() => setActiveTab('simulation')}
+        >
+          Simulation
         </button>
       </nav>
 
@@ -94,10 +100,10 @@ function App() {
             <AltitudeChart />
             <AccelerationChart />
           </div>
-        )}
-        {activeTab === '3d' && <RocketOrientation />}
+        )}        {activeTab === '3d' && <RocketOrientation />}
         {activeTab === 'map' && <GPSMap />}
         {activeTab === 'command' && <CommandPanel />}
+        {activeTab === 'simulation' && <SimulationPanel />}
       </main>
     </div>
   );

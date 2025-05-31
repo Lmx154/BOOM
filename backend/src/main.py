@@ -189,6 +189,103 @@ async def get_stats():
         }
     }
 
+@app.get("/simulator/status")
+async def get_simulator_status():
+    """Get simulator status."""
+    if not simulator:
+        return {"active": False, "message": "Simulator not initialized"}
+    
+    return {
+        "active": settings.USE_SIMULATOR,
+        "profile": simulator.profile,
+        "time": simulator.time,
+        "phase": simulator.phase,
+        "altitude": simulator.launch_alt + simulator.position[2],
+        "position": simulator.position,
+        "velocity": simulator.velocity
+    }
+
+@app.post("/simulator/start/{profile}")
+async def start_simulator(profile: str = "suborbital_hop"):
+    """Start or restart the simulator with a specific profile."""
+    global simulator
+    
+    try:
+        # Initialize simulator with the specified profile
+        simulator = BrunitoSimulator(profile)
+        
+        # Enable simulator mode
+        import importlib
+        config_module = importlib.import_module("..config", __name__)
+        config_module.settings.USE_SIMULATOR = True
+        
+        logger.info(f"Simulator started with profile: {profile}")
+        
+        return {
+            "status": "success",
+            "message": f"Simulator started with profile: {profile}",
+            "profile": profile
+        }
+    except Exception as e:
+        logger.error(f"Failed to start simulator: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to start simulator: {str(e)}"
+        }
+
+@app.post("/simulator/stop")
+async def stop_simulator():
+    """Stop the simulator."""
+    global simulator
+    
+    try:
+        # Disable simulator mode
+        import importlib
+        config_module = importlib.import_module("..config", __name__)
+        config_module.settings.USE_SIMULATOR = False
+        
+        simulator = None
+        
+        logger.info("Simulator stopped")
+        
+        return {
+            "status": "success",
+            "message": "Simulator stopped"
+        }
+    except Exception as e:
+        logger.error(f"Failed to stop simulator: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to stop simulator: {str(e)}"
+        }
+
+@app.post("/simulator/reset")
+async def reset_simulator():
+    """Reset the simulator to initial state."""
+    global simulator
+    
+    if not simulator:
+        return {
+            "status": "error",
+            "message": "Simulator not active"
+        }
+    
+    try:
+        simulator.reset()
+        
+        logger.info("Simulator reset")
+        
+        return {
+            "status": "success",
+            "message": "Simulator reset to initial state"
+        }
+    except Exception as e:
+        logger.error(f"Failed to reset simulator: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to reset simulator: {str(e)}"
+        }
+
 if __name__ == "__main__":
     uvicorn.run(
         "src.main:app",

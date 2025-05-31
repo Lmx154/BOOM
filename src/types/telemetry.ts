@@ -68,6 +68,23 @@ export interface SystemStats {
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
+export interface SimulatorStatus {
+  active: boolean;
+  profile?: string;
+  time?: number;
+  phase?: string;
+  altitude?: number;
+  position?: [number, number, number];
+  velocity?: [number, number, number];
+  message?: string;
+}
+
+export interface SimulatorResponse {
+  status: 'success' | 'error';
+  message: string;
+  profile?: string;
+}
+
 export interface WebSocketMessage {
   type: 'telemetry' | 'event' | 'command_response';
   data: TelemetryPacket | FlightEvent | CommandResponse;
