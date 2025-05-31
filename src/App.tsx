@@ -6,7 +6,7 @@ import AltitudeChart from './components/Charts/AltitudeChart';
 import AccelerationChart from './components/Charts/AccelerationChart';
 import CommandPanel from './components/Command/CommandPanel';
 import GPSMap from './components/Map/GPSMap';
-import RocketOrientation from './components/ThreeD/RocketOrientation';
+import RocketOrientation from './components/3D/RocketOrientation';
 import './App.css';
 
 function App() {
