@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react';
 import { wsClient } from './services/websocket-client';
 import { useTelemetryStore } from './stores/telemetry-store';
 import TelemetryDisplay from './components/TelemetryDisplay/TelemetryDisplay';
-import AltitudeChart from './components/Charts/AltitudeChart';
-import AccelerationChart from './components/Charts/AccelerationChart';
-import MagnetometerChart from './components/Charts/MagnetometerChart';
-import GyroscopeChart from './components/Charts/GyroscopeChart';
+import UnifiedChart from './components/Charts/UnifiedChart';
 import CommandPanel from './components/Command/CommandPanel';
 import GPSMap from './components/Map/GPSMap';
 import RocketOrientation from './components/3D/RocketOrientation';
@@ -96,14 +93,7 @@ function App() {
       </nav>
 
       <main className="app-main">
-        {activeTab === 'telemetry' && <TelemetryDisplay />}        {activeTab === 'charts' && (
-          <div className="charts-grid-four">
-            <AltitudeChart />
-            <AccelerationChart />
-            <MagnetometerChart />
-            <GyroscopeChart />
-          </div>
-        )}{activeTab === '3d' && <RocketOrientation />}
+        {activeTab === 'telemetry' && <TelemetryDisplay />}        {activeTab === 'charts' && <UnifiedChart />}{activeTab === '3d' && <RocketOrientation />}
         {activeTab === 'map' && <GPSMap />}
         {activeTab === 'command' && <CommandPanel />}
         {activeTab === 'simulation' && <SimulationPanel />}
