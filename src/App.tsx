@@ -1,50 +1,105 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { useEffect, useState } from 'react';
+import { wsClient } from './services/websocket-client';
+import { useTelemetryStore } from './stores/telemetry-store';
+import TelemetryDisplay from './components/TelemetryDisplay/TelemetryDisplay';
+import AltitudeChart from './components/Charts/AltitudeChart';
+import AccelerationChart from './components/Charts/AccelerationChart';
+import CommandPanel from './components/Command/CommandPanel';
+import GPSMap from './components/Map/GPSMap';
+import RocketOrientation from './components/ThreeD/RocketOrientation';
+import './App.css';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'map' | 'command'>('telemetry');
+  const { connectionStatus, setConnectionStatus, updateTelemetry, addEvent } = useTelemetryStore();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  useEffect(() => {
+    // Connect to WebSocket
+    wsClient.connect();
+
+    // Set up event listeners
+    const unsubTelemetry = wsClient.onTelemetry((packet) => {
+      updateTelemetry(packet);
+      
+      // Add any events
+      if (packet.events) {
+        packet.events.forEach(event => addEvent(event));
+      }
+    });
+
+    const unsubStatus = wsClient.onStatus((status) => {
+      setConnectionStatus(status as any);
+    });
+
+    const unsubEvent = wsClient.onEvent((event) => {
+      addEvent(event);
+    });
+
+    // Cleanup
+    return () => {
+      unsubTelemetry();
+      unsubStatus();
+      unsubEvent();
+      wsClient.disconnect();
+    };
+  }, []);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="app">
+      <header className="app-header">
+        <h1>BOOM Telemetry</h1>
+        <div className="connection-status">
+          <span className={`status-indicator ${connectionStatus}`}></span>
+          {connectionStatus}
+        </div>
+      </header>
 
-      <div className="row">
-        <a href="https://vitejs.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://reactjs.org" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      <nav className="app-nav">
+        <button 
+          className={activeTab === 'telemetry' ? 'active' : ''}
+          onClick={() => setActiveTab('telemetry')}
+        >
+          Telemetry
+        </button>
+        <button 
+          className={activeTab === 'charts' ? 'active' : ''}
+          onClick={() => setActiveTab('charts')}
+        >
+          Charts
+        </button>
+        <button 
+          className={activeTab === '3d' ? 'active' : ''}
+          onClick={() => setActiveTab('3d')}
+        >
+          3D View
+        </button>
+        <button 
+          className={activeTab === 'map' ? 'active' : ''}
+          onClick={() => setActiveTab('map')}
+        >
+          Map
+        </button>
+        <button 
+          className={activeTab === 'command' ? 'active' : ''}
+          onClick={() => setActiveTab('command')}
+        >
+          Command
+        </button>
+      </nav>
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+      <main className="app-main">
+        {activeTab === 'telemetry' && <TelemetryDisplay />}
+        {activeTab === 'charts' && (
+          <div className="charts-grid">
+            <AltitudeChart />
+            <AccelerationChart />
+          </div>
+        )}
+        {activeTab === '3d' && <RocketOrientation />}
+        {activeTab === 'map' && <GPSMap />}
+        {activeTab === 'command' && <CommandPanel />}
+      </main>
+    </div>
   );
 }
 
