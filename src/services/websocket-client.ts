@@ -66,12 +66,14 @@ class WebSocketClient {
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
         this.notifyStatus('error');
-      };
-
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
+      };      this.ws.onclose = (event) => {
+        console.log('WebSocket disconnected', { code: event.code, reason: event.reason });
         this.notifyStatus('disconnected');
-        this.scheduleReconnect();
+        
+        // Only auto-reconnect if it wasn't a deliberate close
+        if (event.code !== 1000) {
+          this.scheduleReconnect();
+        }
       };
       
     } catch (error) {
@@ -80,7 +82,6 @@ class WebSocketClient {
       this.scheduleReconnect();
     }
   }
-
   disconnect() {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -88,7 +89,8 @@ class WebSocketClient {
     }
     
     if (this.ws) {
-      this.ws.close();
+      // Close with code 1000 (normal closure) to prevent auto-reconnect
+      this.ws.close(1000, 'Disconnected by user');
       this.ws = null;
     }
   }

@@ -5,7 +5,8 @@ import { useTelemetryStore } from '../../stores/telemetry-store';
 import './GPSMap.css';
 
 // You'll need to add your Mapbox token here
-mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
+const MAPBOX_TOKEN = 'YOUR_MAPBOX_TOKEN';
+mapboxgl.accessToken = MAPBOX_TOKEN;
 
 function GPSMap() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -15,9 +16,12 @@ function GPSMap() {
   
   const { currentTelemetry } = useTelemetryStore();
 
+  // Check if Mapbox token is configured
+  const isMapboxConfigured = MAPBOX_TOKEN !== 'YOUR_MAPBOX_TOKEN';
+
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || !isMapboxConfigured) return;
 
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -127,9 +131,18 @@ function GPSMap() {
               `${currentTelemetry.latitude_deg.toFixed(6)}, ${currentTelemetry.longitude_deg.toFixed(6)}` : 
               'N/A'}
           </span>
+        </div>      </div>
+      {!isMapboxConfigured ? (
+        <div className="map map-placeholder">
+          <div className="placeholder-content">
+            <h3>GPS Map</h3>
+            <p>Mapbox token not configured</p>
+            <p>Add your Mapbox token to enable the GPS map</p>
+          </div>
         </div>
-      </div>
-      <div ref={mapContainer} className="map" />
+      ) : (
+        <div ref={mapContainer} className="map" />
+      )}
     </div>
   );
 }

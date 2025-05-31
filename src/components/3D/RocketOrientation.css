@@ -39,3 +39,24 @@
   font-size: 0.9rem;
   font-weight: normal;
 }
+
+.canvas-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #888;
+  text-align: center;
+  padding: 2rem;
+}
+
+.canvas-error h3 {
+  margin: 0 0 1rem 0;
+  color: #fff;
+}
+
+.canvas-error p {
+  margin: 0;
+  font-size: 0.9rem;
+}
