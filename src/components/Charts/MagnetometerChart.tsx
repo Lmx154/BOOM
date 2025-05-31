@@ -6,20 +6,24 @@ import './Charts.css';
 interface ChartData {
   timestamp: string;
   formattedTime: string;
-  accelX: number;
-  accelY: number;
-  accelZ: number;
-  magnitude: number;
+  magX: number;
+  magY: number;
+  magZ: number;
+  magMagnitude: number;
 }
 
-function AccelerationChart() {
+function MagnetometerChart() {
   const [data, setData] = useState<ChartData[]>([]);
   const { telemetryHistory } = useTelemetryStore();
 
   useEffect(() => {
     // Convert telemetry history to chart data with proper timestamps
     const chartData = telemetryHistory
-      .filter(packet => packet.accel_x_mps2 !== undefined)
+      .filter(packet => 
+        packet.mag_x_ut !== undefined && 
+        packet.mag_y_ut !== undefined && 
+        packet.mag_z_ut !== undefined
+      )
       .map(packet => {
         const timestamp = new Date(packet.timestamp);
         
@@ -31,10 +35,12 @@ function AccelerationChart() {
             minute: '2-digit',
             second: '2-digit'
           }),
-          accelX: packet.accel_x_mps2! / 9.81,
-          accelY: packet.accel_y_mps2! / 9.81,
-          accelZ: packet.accel_z_mps2! / 9.81,
-          magnitude: packet.accel_magnitude_g!
+          magX: packet.mag_x_ut!,
+          magY: packet.mag_y_ut!,
+          magZ: packet.mag_z_ut!,
+          magMagnitude: packet.mag_magnitude_ut || Math.sqrt(
+            packet.mag_x_ut! ** 2 + packet.mag_y_ut! ** 2 + packet.mag_z_ut! ** 2
+          ),
         };
       })
       .slice(-50); // Keep last 50 data points for performance
@@ -44,7 +50,7 @@ function AccelerationChart() {
 
   return (
     <div className="chart-container">
-      <h3>Acceleration vs Time</h3>
+      <h3>Magnetometer vs Time</h3>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -58,46 +64,52 @@ function AccelerationChart() {
             tick={{ fontSize: 10 }}
           />
           <YAxis 
-            label={{ value: 'Acceleration (g)', angle: -90, position: 'insideLeft' }}
+            label={{ value: 'Magnetometer (μT)', angle: -90, position: 'insideLeft' }}
             stroke="#666"
           />
           <Tooltip 
-            contentStyle={{ backgroundColor: '#2a2a2a', border: '1px solid #333', color: '#fff' }}
+            contentStyle={{ 
+              backgroundColor: '#2a2a2a', 
+              border: '1px solid #333',
+              borderRadius: '4px',
+              color: '#fff'
+            }}
             labelFormatter={(value) => `Time: ${value}`}
             formatter={(value: number, name: string) => [
-              `${value.toFixed(2)} g`, 
+              `${value.toFixed(2)} μT`, 
               name
             ]}
           />
           <Legend />
+          
           <Line 
             type="monotone" 
-            dataKey="accelX" 
-            stroke="#ff6384" 
+            dataKey="magX" 
+            stroke="#ff6b6b" 
             strokeWidth={1.5}
             dot={false}
             name="X-axis"
           />
           <Line 
             type="monotone" 
-            dataKey="accelY" 
-            stroke="#36a2eb" 
+            dataKey="magY" 
+            stroke="#4ecdc4" 
             strokeWidth={1.5}
             dot={false}
             name="Y-axis"
           />
           <Line 
             type="monotone" 
-            dataKey="accelZ" 
-            stroke="#ffcd56" 
+            dataKey="magZ" 
+            stroke="#45b7d1" 
             strokeWidth={1.5}
             dot={false}
             name="Z-axis"
           />
           <Line 
             type="monotone" 
-            dataKey="magnitude" 
-            stroke="#4bc0c0" 
+            dataKey="magMagnitude" 
+            stroke="#ff9f43" 
             strokeWidth={2.5}
             dot={false}
             name="Magnitude"
@@ -108,4 +120,4 @@ function AccelerationChart() {
   );
 }
 
-export default AccelerationChart;
+export default MagnetometerChart;

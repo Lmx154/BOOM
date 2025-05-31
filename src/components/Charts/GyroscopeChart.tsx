@@ -6,20 +6,24 @@ import './Charts.css';
 interface ChartData {
   timestamp: string;
   formattedTime: string;
-  accelX: number;
-  accelY: number;
-  accelZ: number;
-  magnitude: number;
+  gyroX: number;
+  gyroY: number;
+  gyroZ: number;
+  gyroMagnitude: number;
 }
 
-function AccelerationChart() {
+function GyroscopeChart() {
   const [data, setData] = useState<ChartData[]>([]);
   const { telemetryHistory } = useTelemetryStore();
 
   useEffect(() => {
     // Convert telemetry history to chart data with proper timestamps
     const chartData = telemetryHistory
-      .filter(packet => packet.accel_x_mps2 !== undefined)
+      .filter(packet => 
+        packet.gyro_x_dps !== undefined &&
+        packet.gyro_y_dps !== undefined &&
+        packet.gyro_z_dps !== undefined
+      )
       .map(packet => {
         const timestamp = new Date(packet.timestamp);
         
@@ -31,10 +35,12 @@ function AccelerationChart() {
             minute: '2-digit',
             second: '2-digit'
           }),
-          accelX: packet.accel_x_mps2! / 9.81,
-          accelY: packet.accel_y_mps2! / 9.81,
-          accelZ: packet.accel_z_mps2! / 9.81,
-          magnitude: packet.accel_magnitude_g!
+          gyroX: packet.gyro_x_dps!,
+          gyroY: packet.gyro_y_dps!,
+          gyroZ: packet.gyro_z_dps!,
+          gyroMagnitude: packet.gyro_magnitude_dps || Math.sqrt(
+            packet.gyro_x_dps! ** 2 + packet.gyro_y_dps! ** 2 + packet.gyro_z_dps! ** 2
+          ),
         };
       })
       .slice(-50); // Keep last 50 data points for performance
@@ -44,7 +50,7 @@ function AccelerationChart() {
 
   return (
     <div className="chart-container">
-      <h3>Acceleration vs Time</h3>
+      <h3>Gyroscope vs Time</h3>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -58,45 +64,51 @@ function AccelerationChart() {
             tick={{ fontSize: 10 }}
           />
           <YAxis 
-            label={{ value: 'Acceleration (g)', angle: -90, position: 'insideLeft' }}
+            label={{ value: 'Angular Velocity (°/s)', angle: -90, position: 'insideLeft' }}
             stroke="#666"
           />
           <Tooltip 
-            contentStyle={{ backgroundColor: '#2a2a2a', border: '1px solid #333', color: '#fff' }}
+            contentStyle={{ 
+              backgroundColor: '#2a2a2a', 
+              border: '1px solid #333',
+              borderRadius: '4px',
+              color: '#fff'
+            }}
             labelFormatter={(value) => `Time: ${value}`}
             formatter={(value: number, name: string) => [
-              `${value.toFixed(2)} g`, 
+              `${value.toFixed(1)} °/s`, 
               name
             ]}
           />
           <Legend />
+          
           <Line 
             type="monotone" 
-            dataKey="accelX" 
+            dataKey="gyroX" 
             stroke="#ff6384" 
             strokeWidth={1.5}
             dot={false}
-            name="X-axis"
+            name="X-axis (Roll)"
           />
           <Line 
             type="monotone" 
-            dataKey="accelY" 
+            dataKey="gyroY" 
             stroke="#36a2eb" 
             strokeWidth={1.5}
             dot={false}
-            name="Y-axis"
+            name="Y-axis (Pitch)"
           />
           <Line 
             type="monotone" 
-            dataKey="accelZ" 
+            dataKey="gyroZ" 
             stroke="#ffcd56" 
             strokeWidth={1.5}
             dot={false}
-            name="Z-axis"
+            name="Z-axis (Yaw)"
           />
           <Line 
             type="monotone" 
-            dataKey="magnitude" 
+            dataKey="gyroMagnitude" 
             stroke="#4bc0c0" 
             strokeWidth={2.5}
             dot={false}
@@ -108,4 +120,4 @@ function AccelerationChart() {
   );
 }
 
-export default AccelerationChart;
+export default GyroscopeChart;

@@ -4,26 +4,36 @@ import { useTelemetryStore } from '../../stores/telemetry-store';
 import './Charts.css';
 
 interface ChartData {
-  time: number;
+  timestamp: string;
+  formattedTime: string;
   altitude: number;
 }
 
 function AltitudeChart() {
   const [data, setData] = useState<ChartData[]>([]);
-  const { telemetryHistory, missionStartTime } = useTelemetryStore();
+  const { telemetryHistory } = useTelemetryStore();
 
   useEffect(() => {
-    if (!missionStartTime) return;
-
-    // Convert telemetry history to chart data
-    const chartData = telemetryHistory.map(packet => ({
-      time: (new Date(packet.timestamp).getTime() - missionStartTime.getTime()) / 1000,
-      altitude: packet.altitude_m
-    }));
+    // Convert telemetry history to chart data with proper timestamps
+    const chartData = telemetryHistory
+      .map(packet => {
+        const timestamp = new Date(packet.timestamp);
+        
+        return {
+          timestamp: packet.timestamp,
+          formattedTime: timestamp.toLocaleTimeString('en-US', {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+          }),
+          altitude: packet.altitude_m
+        };
+      })
+      .slice(-50); // Keep last 50 data points for performance
 
     setData(chartData);
-  }, [telemetryHistory, missionStartTime]);
-
+  }, [telemetryHistory]);
   return (
     <div className="chart-container">
       <h3>Altitude vs Time</h3>
@@ -31,17 +41,21 @@ function AltitudeChart() {
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#333" />
           <XAxis 
-            dataKey="time" 
-            label={{ value: 'Time (s)', position: 'insideBottom', offset: -5 }}
+            dataKey="formattedTime"
+            angle={-45}
+            textAnchor="end"
+            height={80}
+            interval="preserveStartEnd"
             stroke="#666"
+            tick={{ fontSize: 10 }}
           />
           <YAxis 
             label={{ value: 'Altitude (m)', angle: -90, position: 'insideLeft' }}
             stroke="#666"
           />
           <Tooltip 
-            contentStyle={{ backgroundColor: '#2a2a2a', border: '1px solid #333' }}
-            labelFormatter={(value) => `Time: ${value}s`}
+            contentStyle={{ backgroundColor: '#2a2a2a', border: '1px solid #333', color: '#fff' }}
+            labelFormatter={(value) => `Time: ${value}`}
           />
           <Legend />
           <Line 
