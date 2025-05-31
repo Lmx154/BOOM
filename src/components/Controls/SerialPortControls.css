@@ -1,0 +1,160 @@
+.serial-port-controls {
+  padding: 20px;
+  background: #1e1e1e;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.serial-port-controls h3 {
+  color: #ffffff;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.serial-controls-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.serial-port-select {
+  flex: 1;
+  padding: 8px 12px;
+  background: #2d2d2d;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.serial-port-select:focus {
+  outline: none;
+  border-color: #0078d4;
+}
+
+.serial-controls-row button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-primary {
+  background: #0078d4;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #106ebe;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.serial-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 14px;
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.status-indicator.connected {
+  background: #28a745;
+}
+
+.status-indicator.disconnected {
+  background: #dc3545;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 14px;
+  margin-top: 10px;
+  padding: 8px;
+  background: rgba(220, 53, 69, 0.1);
+  border-radius: 4px;
+  border-left: 3px solid #dc3545;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #444;
+  border-radius: 50%;
+  border-top-color: #0078d4;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.recommended-port {
+  background: rgba(40, 167, 69, 0.2) !important;
+  color: #28a745 !important;
+}
+
+.port-recommendations {
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.port-recommendations h4 {
+  color: #ffffff;
+  margin-bottom: 10px;
+  font-size: 1rem;
+}
+
+.port-result {
+  padding: 8px;
+  margin: 5px 0;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.port-result.recommended {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+  border-left: 3px solid #28a745;
+}
+
+.port-result.not-recommended {
+  background: rgba(108, 117, 125, 0.2);
+  color: #6c757d;
+  border-left: 3px solid #6c757d;
+}

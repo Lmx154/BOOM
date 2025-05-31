@@ -2,9 +2,11 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from typing import List
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import serial.tools.list_ports
 
 from .config import settings
 from .communication.serial_manager import SerialManager
@@ -85,17 +87,11 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting BOOM telemetry backend")
     
-    # Initialize serial connection
-    if not settings.USE_SIMULATOR:
-        try:
-            await serial_manager.connect(settings.SERIAL_PORT)
-            logger.info(f"Connected to serial port {settings.SERIAL_PORT}")
-        except Exception as e:
-            logger.error(f"Failed to connect to serial port: {e}")
-            if settings.REQUIRE_SERIAL:
-                raise
-    else:
-        # Initialize simulator
+    # Don't auto-connect to serial port - let user manually select
+    # Serial connection will be handled via the Controls tab
+    
+    if settings.USE_SIMULATOR:
+        # Initialize simulator if enabled
         global simulator
         simulator = BrunitoSimulator()
         logger.info("Using simulator for telemetry")
@@ -291,6 +287,177 @@ async def reset_simulator():
             "status": "error",
             "message": f"Failed to reset simulator: {str(e)}"
         }
+
+# Serial port management endpoints
+@app.get("/serial/ports")
+async def list_serial_ports():
+    """List available serial ports."""
+    try:
+        ports = serial.tools.list_ports.comports()
+        port_list = []
+        
+        for port in ports:
+            port_list.append({
+                "device": port.device,
+                "description": port.description,
+                "hwid": port.hwid
+            })
+        
+        return {
+            "status": "success",
+            "ports": port_list
+        }
+    except Exception as e:
+        logger.error(f"Failed to list serial ports: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to list serial ports: {str(e)}",
+            "ports": []
+        }
+
+@app.post("/serial/test")
+async def test_serial_port(port: str):
+    """Test a serial port for valid telemetry data."""
+    try:
+        import serial
+        import time
+        
+        # Open port temporarily for testing
+        ser = serial.Serial(
+            port=port,
+            baudrate=settings.SERIAL_BAUDRATE,
+            timeout=2.0  # 2 second timeout for testing
+        )
+        
+        # Read a few lines to test for telemetry keywords
+        keywords = []
+        sample_data = ""
+        has_valid_data = False
+        
+        # Try to read up to 5 lines or 3 seconds
+        start_time = time.time()
+        lines_read = 0
+        
+        while lines_read < 5 and (time.time() - start_time) < 3:
+            try:
+                line = ser.readline().decode('utf-8', errors='ignore').strip()
+                if line:
+                    lines_read += 1
+                    sample_data += line + "\\n"
+                    
+                    # Check for telemetry keywords
+                    line_upper = line.upper()
+                    telemetry_keywords = ['IDLE', 'ARMED', 'TEST', 'RECOVERY', 'FLIGHT', 'BOOST', 'COAST', 'DROGUE', 'MAIN']
+                    
+                    for keyword in telemetry_keywords:
+                        if keyword in line_upper and keyword not in keywords:
+                            keywords.append(keyword)
+                            has_valid_data = True
+                    
+                    # Also check for typical telemetry data patterns (altitude, GPS, etc.)
+                    if any(pattern in line_upper for pattern in ['ALT:', 'GPS:', 'ACCEL:', 'GYRO:', 'LAT:', 'LON:']):
+                        has_valid_data = True
+                        
+            except:
+                break
+        
+        ser.close()
+        
+        return {
+            "status": "success",
+            "hasValidData": has_valid_data,
+            "keywords": keywords,
+            "sampleData": sample_data[:200]  # Limit sample data length
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to test port {port}: {str(e)}",
+            "hasValidData": False,
+            "keywords": []
+        }
+
+@app.post("/serial/open")
+async def open_serial_port(port: str, baudrate: int = 921600):
+    """Open a serial port connection."""
+    try:
+        # Close existing connection if any
+        await serial_manager.close()
+        
+        # Connect to the specified port
+        success = await serial_manager.connect(port)
+        
+        if success:
+            # Disable simulator mode when serial is connected
+            import importlib
+            config_module = importlib.import_module("..config", __name__)
+            config_module.settings.USE_SIMULATOR = False
+            
+            return {
+                "status": "success",
+                "message": f"Connected to serial port {port}",
+                "port": port,
+                "baudrate": baudrate
+            }
+        else:
+            raise Exception("Failed to connect to serial port")
+            
+    except Exception as e:
+        logger.error(f"Failed to open serial port {port}: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to open serial port {port}: {str(e)}"
+        }
+
+@app.post("/serial/close")
+async def close_serial_port():
+    """Close the current serial port connection."""
+    try:
+        await serial_manager.close()
+        
+        return {
+            "status": "success",
+            "message": "Serial port closed"
+        }
+    except Exception as e:
+        logger.error(f"Failed to close serial port: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to close serial port: {str(e)}"
+        }
+
+@app.post("/serial/write")
+async def write_to_serial_port(data: str):
+    """Write data to the serial port."""
+    try:
+        if not serial_manager.is_connected:
+            raise HTTPException(status_code=400, detail="Serial port not connected")
+        
+        success = await serial_manager.send_command(data)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": f"Data written to serial port: {data}"
+            }
+        else:
+            raise Exception("Failed to write to serial port")
+            
+    except Exception as e:
+        logger.error(f"Failed to write to serial port: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to write to serial port: {str(e)}"
+        }
+
+@app.get("/serial/status")
+async def get_serial_status():
+    """Get serial port connection status."""
+    return {
+        "connected": serial_manager.is_connected,
+        "port": serial_manager.port if serial_manager.is_connected else None
+    }
 
 if __name__ == "__main__":
     uvicorn.run(

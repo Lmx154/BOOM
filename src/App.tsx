@@ -7,10 +7,11 @@ import CommandPanel from './components/Command/CommandPanel';
 import GPSMap from './components/Map/GPSMap';
 import RocketOrientation from './components/3D/RocketOrientation';
 import SimulationPanel from './components/Simulation/SimulationPanel';
+import { SerialPortControls } from './components/Controls/SerialPortControls';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'map' | 'command' | 'simulation'>('telemetry');
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'map' | 'command' | 'controls' | 'simulation'>('telemetry');
   const { connectionStatus, setConnectionStatus, updateTelemetry, addEvent } = useTelemetryStore();
 
   useEffect(() => {
@@ -85,17 +86,22 @@ function App() {
           Command
         </button>
         <button 
+          className={activeTab === 'controls' ? 'active' : ''}
+          onClick={() => setActiveTab('controls')}
+        >
+          Controls
+        </button>
+        <button 
           className={activeTab === 'simulation' ? 'active' : ''}
           onClick={() => setActiveTab('simulation')}
         >
           Simulation
         </button>
-      </nav>
-
-      <main className="app-main">
+      </nav>      <main className="app-main">
         {activeTab === 'telemetry' && <TelemetryDisplay />}        {activeTab === 'charts' && <UnifiedChart />}{activeTab === '3d' && <RocketOrientation />}
         {activeTab === 'map' && <GPSMap />}
         {activeTab === 'command' && <CommandPanel />}
+        {activeTab === 'controls' && <SerialPortControls />}
         {activeTab === 'simulation' && <SimulationPanel />}
       </main>
     </div>

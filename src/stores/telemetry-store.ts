@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { TelemetryPacket, FlightEvent, ConnectionStatus } from '../types/telemetry';
+import { serialPortAPI, SerialPort } from '../services/serial-port-api';
 
 interface TelemetryState {
   // Connection status
@@ -18,12 +19,22 @@ interface TelemetryState {
   // Mission info
   missionStartTime: Date | null;
   maxAltitude: number;
+  // Serial port management
+  serialPort: string | null;
+  serialPorts: SerialPort[];
+  isSerialConnected: boolean;
   
   // Actions
   setConnectionStatus: (status: ConnectionStatus) => void;
   updateTelemetry: (packet: TelemetryPacket) => void;
   addEvent: (event: FlightEvent) => void;
   reset: () => void;
+  
+  // Serial port actions
+  refreshPorts: () => Promise<void>;
+  openSerial: (port: string) => Promise<void>;
+  closeSerial: () => Promise<void>;
+  writeToSerial: (data: string) => Promise<void>;
 }
 
 export const useTelemetryStore = create<TelemetryState>((set, get) => ({
@@ -35,6 +46,11 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
   events: [],
   missionStartTime: null,
   maxAltitude: 0,
+  
+  // Serial port state
+  serialPort: null,
+  serialPorts: [],
+  isSerialConnected: false,
   
   // Actions
   setConnectionStatus: (status) => set({ connectionStatus: status }),
@@ -65,14 +81,60 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
   addEvent: (event) => set((state) => ({
     events: [...state.events, event]
   })),
-  
-  reset: () => set({
+    reset: () => set({
     currentTelemetry: null,
     telemetryHistory: [],
     events: [],
     missionStartTime: null,
     maxAltitude: 0
-  })
+  }),
+  // Serial port actions
+  refreshPorts: async () => {
+    try {
+      const ports = await serialPortAPI.listPorts();
+      set({ serialPorts: ports });
+    } catch (error) {
+      console.error('Failed to refresh ports:', error);
+    }
+  },
+
+  openSerial: async (port: string) => {
+    try {
+      await serialPortAPI.openPort(port, 921600);
+      set({ 
+        serialPort: port, 
+        isSerialConnected: true,
+        connectionStatus: 'connected'
+      });
+    } catch (error) {
+      console.error('Failed to open serial port:', error);
+      set({ isSerialConnected: false });
+      throw error;
+    }
+  },
+
+  closeSerial: async () => {
+    try {
+      await serialPortAPI.closePort();
+      set({ 
+        serialPort: null, 
+        isSerialConnected: false,
+        connectionStatus: 'disconnected'
+      });
+    } catch (error) {
+      console.error('Failed to close serial port:', error);
+      throw error;
+    }
+  },
+
+  writeToSerial: async (data: string) => {
+    try {
+      await serialPortAPI.writeToPort(data);
+    } catch (error) {
+      console.error('Failed to write to serial port:', error);
+      throw error;
+    }
+  }
 }));
 
 // Derived selectors
