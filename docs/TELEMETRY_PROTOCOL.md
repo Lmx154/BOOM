@@ -257,18 +257,10 @@ Commands sent to the GS use bracketed format:
 ```
 <CMD:ARM>                     // Arm the flight system
 <CMD:DISARM>                  // Disarm the flight system
-<CMD:ABORT>                   // Emergency abort
-<CMD:RECOVERY>                // Force recovery mode
-<CMD:CALIBRATE>               // Start sensor calibration
+<CMD:ENTER_RECOVERY>                // Force recovery mode
+<CMD:ENTER_TEST>                    //Enter test mode
 ```
 
-##### 4. Data Commands
-```
-<CMD:START_LOG>               // Start data logging
-<CMD:STOP_LOG>                // Stop data logging
-<CMD:CLEAR_LOG>               // Clear log files
-<CMD:DOWNLOAD_LOG>            // Download log data
-```
 
 #### Command Responses
 
