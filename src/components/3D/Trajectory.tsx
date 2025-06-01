@@ -17,108 +17,77 @@ function CameraController({
   rocketPosition, 
   cameraMode, 
   trajectory,
-  isActive 
+  isActive,
+  maxAltitude
 }: { 
   rocketPosition: [number, number, number], 
   cameraMode: CameraMode,
   trajectory: THREE.Vector3[],
-  isActive: boolean
+  isActive: boolean,
+  maxAltitude: number
 }) {
   const { camera } = useThree();
   
-  // Calculate trajectory bounds for overview mode
-  const trajectoryBounds = useMemo(() => {
-    if (trajectory.length === 0) {
-      return { min: new THREE.Vector3(-100, -10, -100), max: new THREE.Vector3(100, 200, 100) };
-    }
-    
-    const min = new THREE.Vector3(Infinity, Infinity, Infinity);
-    const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
-    
-    trajectory.forEach(point => {
-      min.min(point);
-      max.max(point);
-    });
-    
-    // Add padding
-    const padding = 50;
-    min.subScalar(padding);
-    max.addScalar(padding);
-    
-    // Ensure minimum bounds
-    if (max.y - min.y < 100) {
-      max.y = Math.max(max.y, 200);
-      min.y = Math.min(min.y, -10);
-    }
-    
-    return { min, max };
-  }, [trajectory]);
-  
   useFrame(() => {
-    if (!isActive) return;
+    if (!isActive || cameraMode === CameraMode.FREE) return; // Don't control camera in FREE mode
     
     const [x, y, z] = rocketPosition;
     const rocketPos = new THREE.Vector3(x, y, z);
+      // Calculate zoom level based on altitude (like a map) but account for scene scaling
+    const baseDistance = 300;
+    const zoomDistance = Math.max(baseDistance, maxAltitude * 2.5);
     
     switch (cameraMode) {
       case CameraMode.FOLLOW:
-        // Smooth following with offset
-        const followOffset = new THREE.Vector3(80, 120, 80);
-        const targetPosition = rocketPos.clone().add(followOffset);
+        // Follow rocket but maintain good viewing distance
+        const followPos = new THREE.Vector3(
+          rocketPos.x + zoomDistance * 0.7,
+          rocketPos.y + zoomDistance * 0.8,
+          rocketPos.z + zoomDistance * 0.5
+        );
         
-        // Smooth camera movement
-        camera.position.lerp(targetPosition, 0.03);
-        
-        // Look at rocket with smooth transition
+        camera.position.lerp(followPos, 0.008);
         camera.lookAt(rocketPos);
         break;
         
       case CameraMode.LOCK:
-        // Close lock-on to rocket with dynamic offset based on speed
-        const speed = trajectory.length > 1 ? 
-          trajectory[trajectory.length - 1].distanceTo(trajectory[trajectory.length - 2]) : 1;
-        
-        const lockDistance = Math.max(30, speed * 10); // Dynamic distance based on speed
-        const lockOffset = new THREE.Vector3(
-          lockDistance * 0.6, 
-          lockDistance * 0.8, 
-          lockDistance * 0.6
+        // Close tracking
+        const lockPos = new THREE.Vector3(
+          rocketPos.x - zoomDistance * 0.3,
+          rocketPos.y + zoomDistance * 0.4,
+          rocketPos.z - zoomDistance * 0.2
         );
         
-        const lockTargetPos = rocketPos.clone().add(lockOffset);
-        
-        // More aggressive following for lock mode
-        camera.position.lerp(lockTargetPos, 0.08);
+        camera.position.lerp(lockPos, 0.012);
         camera.lookAt(rocketPos);
         break;
         
       case CameraMode.OVERVIEW:
-        // Show entire trajectory with optimal viewing angle
-        const center = trajectoryBounds.min.clone().lerp(trajectoryBounds.max, 0.5);
-        const size = trajectoryBounds.max.clone().sub(trajectoryBounds.min);
+        // Wide view of entire trajectory
+        const allPoints = [...trajectory, rocketPos];
+        if (allPoints.length === 0) break;
         
-        // Calculate optimal camera distance
+        const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+        const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+        
+        allPoints.forEach(point => {
+          min.min(point);
+          max.max(point);
+        });
+        
+        const center = min.clone().lerp(max, 0.5);
+        const size = max.clone().sub(min);
         const maxDim = Math.max(size.x, size.y, size.z);
-        const distance = maxDim * 1.5;
         
-        // Position camera to see entire trajectory
-        const overviewPos = center.clone().add(new THREE.Vector3(distance, distance * 0.8, distance));
+        const overviewDistance = Math.max(maxDim * 2, zoomDistance);
+        const overviewPos = new THREE.Vector3(
+          center.x + overviewDistance * 0.6,
+          center.y + overviewDistance * 0.8,
+          center.z + overviewDistance * 0.6
+        );
         
-        camera.position.lerp(overviewPos, 0.02);
+        camera.position.lerp(overviewPos, 0.005);
         camera.lookAt(center);
-        break;
-        
-      case CameraMode.FREE:
-      default:
-        // Free mode - let user control, but ensure rocket stays visible
-        const cameraToRocket = rocketPos.clone().sub(camera.position);
-        const distanceToRocket = cameraToRocket.length();
-        
-        // If rocket gets too far away, gently pull camera closer
-        if (distanceToRocket > 500) {
-          const pullDirection = cameraToRocket.normalize().multiplyScalar(10);
-          camera.position.add(pullDirection);
-        }
         break;
     }
   });
@@ -126,7 +95,7 @@ function CameraController({
   return null;
 }
 
-function RocketSphere({ position }: { position: [number, number, number] }) {
+function RocketSphere({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [intensity, setIntensity] = useState(1);
 
@@ -142,7 +111,7 @@ function RocketSphere({ position }: { position: [number, number, number] }) {
 
   return (
     <mesh ref={meshRef} position={position}>
-      <sphereGeometry args={[2, 16, 16]} />
+      <sphereGeometry args={[2 * scale, 16, 16]} />
       <meshStandardMaterial 
         color="#ff0000" 
         emissive="#ff0000"
@@ -186,14 +155,14 @@ function TrajectoryTrail({ points, colors }: { points: THREE.Vector3[]; colors: 
 }
 
 // Apogee marker component
-function ApogeeMarker({ position }: { position: [number, number, number] }) {
+function ApogeeMarker({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
   return (
     <group position={position}>
       <mesh>
-        <sphereGeometry args={[3, 16, 16]} />
+        <sphereGeometry args={[3 * scale, 16, 16]} />
         <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
       </mesh>
-      <Html position={[0, 5, 0]} center>
+      <Html position={[0, 5 * scale, 0]} center>
         <div style={{
           background: 'rgba(255, 0, 0, 0.9)',
           color: 'white',
@@ -212,10 +181,12 @@ function ApogeeMarker({ position }: { position: [number, number, number] }) {
 // Apogee prediction visualization component
 function ApogeePredictionMarker({ 
   position, 
-  prediction 
+  prediction,
+  scale = 1
 }: { 
   position: [number, number, number]; 
-  prediction: { predicted_time: number; window_start?: number; window_end?: number; detected: boolean } 
+  prediction: { predicted_time: number; window_start?: number; window_end?: number; detected: boolean };
+  scale?: number;
 }) {
   const meshRef = useRef<THREE.Mesh>(null);
 
@@ -230,7 +201,7 @@ function ApogeePredictionMarker({
   return (
     <group position={position}>
       <mesh ref={meshRef}>
-        <sphereGeometry args={[4, 16, 16]} />
+        <sphereGeometry args={[4 * scale, 16, 16]} />
         <meshStandardMaterial 
           color={prediction.detected ? "#ff0000" : "#ff8800"} 
           emissive={prediction.detected ? "#ff0000" : "#ff8800"}
@@ -239,7 +210,7 @@ function ApogeePredictionMarker({
           opacity={0.7}
         />
       </mesh>
-      <Html position={[0, 8, 0]} center>
+      <Html position={[0, 8 * scale, 0]} center>
         <div style={{
           background: prediction.detected ? 'rgba(255, 0, 0, 0.9)' : 'rgba(255, 136, 0, 0.9)',
           color: 'white',
@@ -261,18 +232,20 @@ function ApogeePredictionMarker({
 // Velocity vector component
 function VelocityVector({ 
   position, 
-  velocity 
+  velocity,
+  scale = 1
 }: { 
   position: [number, number, number]; 
-  velocity: [number, number, number] 
+  velocity: [number, number, number];
+  scale?: number;
 }) {
   const speed = Math.sqrt(velocity[0] ** 2 + velocity[1] ** 2 + velocity[2] ** 2);
   
   if (speed < 1) return null; // Don't show very small velocities
   
-  // Scale vector for visibility
-  const scale = Math.min(speed * 2, 50);
-  const direction = velocity.map(v => v / speed * scale) as [number, number, number];
+  // Scale vector for visibility - already scaled with scene
+  const vectorScale = Math.min(speed * 2, 50);
+  const direction = velocity.map(v => v / speed * vectorScale) as [number, number, number];
   const endPosition: [number, number, number] = [
     position[0] + direction[0],
     position[1] + direction[1], 
@@ -284,11 +257,11 @@ function VelocityVector({
       <Line
         points={[new THREE.Vector3(...position), new THREE.Vector3(...endPosition)]}
         color="#00ffff"
-        lineWidth={2}
+        lineWidth={Math.max(2 * scale, 0.5)}
       />
       {/* Arrow head */}
       <mesh position={endPosition}>
-        <coneGeometry args={[1, 3, 8]} />
+        <coneGeometry args={[1 * scale, 3 * scale, 8]} />
         <meshStandardMaterial color="#00ffff" />
       </mesh>
     </group>
@@ -320,20 +293,24 @@ function FlightEventMarkers({ events }: { events: any[] }) {
 
 // Main trajectory scene
 function TrajectoryScene({ 
-  cameraMode
+  cameraMode,
+  onMaxAltitudeChange
 }: { 
-  cameraMode: CameraMode
+  cameraMode: CameraMode;
+  onMaxAltitudeChange?: (altitude: number) => void;
 }) {
   const { currentTelemetry, events } = useTelemetryStore();
   const [trajectory, setTrajectory] = useState<THREE.Vector3[]>([]);
   const [trailColors, setTrailColors] = useState<string[]>([]);
   const [apogeePosition, setApogeePosition] = useState<[number, number, number] | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
+  const [sceneScale, setSceneScale] = useState<number>(1);
   
   // Get flight phase from telemetry data
   const flightPhase = currentTelemetry?.flight_phase || 
                       currentTelemetry?.flight_summary?.current_phase || 
                       'IDLE';
-                      
+
   const rocketPosition: [number, number, number] = useMemo(() => {
     if (!currentTelemetry) return [0, 0, 0];
     
@@ -349,10 +326,9 @@ function TrajectoryScene({
       
       if (hasValidGPS) {
         // Simple local coordinate conversion - use smaller scale factors for visualization
-        // This creates a local coordinate system centered at the launch site
-        const x = (currentTelemetry.longitude_deg + 80.605659) * 111320; // ~111.32km per degree longitude
-        const y = currentTelemetry.altitude_m; // Keep altitude as-is
-        const z = (currentTelemetry.latitude_deg - 28.396837) * 110540; // ~110.54km per degree latitude
+        const x = (currentTelemetry.longitude_deg + 80.605659) * 111320;
+        const y = currentTelemetry.altitude_m;
+        const z = (currentTelemetry.latitude_deg - 28.396837) * 110540;
         
         return [x, y, z];
       } else {
@@ -361,10 +337,67 @@ function TrajectoryScene({
       }
     }
   }, [currentTelemetry]);
-  
+  // Calculate maximum altitude for camera positioning AND scene scaling
+  const maxAltitudeInTrajectory = useMemo(() => {
+    if (trajectory.length === 0) return Math.max(rocketPosition[1], 100);
+    
+    const maxFromTrajectory = Math.max(...trajectory.map(point => point.y));
+    const result = Math.max(maxFromTrajectory, rocketPosition[1], 100);
+    
+    // Notify parent component of altitude change
+    if (onMaxAltitudeChange) {
+      onMaxAltitudeChange(result);
+    }
+    
+    return result;
+  }, [trajectory, rocketPosition, onMaxAltitudeChange]);
+
+  // Calculate scene scale based on altitude - this keeps everything visible
+  useEffect(() => {
+    // Scale down the scene as altitude increases to keep rocket in view
+    // At 100m altitude, scale = 1.0 (normal size)
+    // At 1000m altitude, scale = 0.1 (10x smaller)
+    // At 10000m altitude, scale = 0.01 (100x smaller)
+    const baseAltitude = 100; // Altitude at which we start scaling
+    const currentAltitude = Math.max(maxAltitudeInTrajectory, baseAltitude);
+    const newScale = baseAltitude / currentAltitude;
+    
+    // Clamp scale to reasonable bounds
+    const clampedScale = Math.max(0.001, Math.min(1.0, newScale));
+    setSceneScale(clampedScale);
+  }, [maxAltitudeInTrajectory]);
+
+  // Apply scaling to positions for rendering
+  const scaledRocketPosition: [number, number, number] = useMemo(() => [
+    rocketPosition[0] * sceneScale,
+    rocketPosition[1] * sceneScale,
+    rocketPosition[2] * sceneScale
+  ], [rocketPosition, sceneScale]);
+
+  const scaledTrajectory = useMemo(() => 
+    trajectory.map(point => new THREE.Vector3(
+      point.x * sceneScale,
+      point.y * sceneScale,
+      point.z * sceneScale
+    )), [trajectory, sceneScale]);
+
+  const scaledApogeePosition = useMemo((): [number, number, number] | null => 
+    apogeePosition ? [
+      apogeePosition[0] * sceneScale,
+      apogeePosition[1] * sceneScale,
+      apogeePosition[2] * sceneScale
+    ] : null, [apogeePosition, sceneScale]);
+
   // Update trajectory
   useEffect(() => {
     if (!currentTelemetry) return;
+
+    // Throttle updates to reduce jank - only update every 100ms
+    const currentTime = Date.now();
+    if (currentTime - lastUpdateTime < 100) {
+      return;
+    }
+    setLastUpdateTime(currentTime);
 
     // Safety check: ensure position is reasonable
     const [x, y, z] = rocketPosition;
@@ -380,6 +413,13 @@ function TrajectoryScene({
     }
 
     const newPoint = new THREE.Vector3(...rocketPosition);
+    
+    // Only add point if it's different enough from the last point to reduce noise
+    const minDistance = 0.5; // Minimum distance between points
+    const shouldAddPoint = trajectory.length === 0 || 
+      trajectory[trajectory.length - 1].distanceTo(newPoint) > minDistance;
+    
+    if (!shouldAddPoint) return;
     
     // Determine color based on flight phase
     let color = '#00ff00'; // Green - default/idle
@@ -425,42 +465,41 @@ function TrajectoryScene({
       }
       return newColors;
     });
-    
+
     // Check for apogee event
     const apogeeEvent = events.find(e => e.type === 'APOGEE_DETECTED');
     if (apogeeEvent && !apogeePosition) {
       setApogeePosition(rocketPosition);
     }
-  }, [currentTelemetry, flightPhase, rocketPosition, events, apogeePosition]);
+  }, [currentTelemetry, flightPhase, rocketPosition, events, apogeePosition, lastUpdateTime]);
 
   return (
     <>
       <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} />
-      
-      {/* Camera Controller */}
+      <pointLight position={[10, 10, 10]} />      {/* Camera Controller */}
       <CameraController 
-        rocketPosition={rocketPosition}
+        rocketPosition={scaledRocketPosition}
         cameraMode={cameraMode}
-        trajectory={trajectory}
+        trajectory={scaledTrajectory}
         isActive={true}
+        maxAltitude={maxAltitudeInTrajectory * sceneScale}
       />
+
+      {/* Coordinate system axes for debugging - scaled */}
+      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(100 * sceneScale, 0, 0)]} color="red" lineWidth={2} />
+      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 100 * sceneScale, 0)]} color="green" lineWidth={2} />
+      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 100 * sceneScale)]} color="blue" lineWidth={2} />
       
-      {/* Coordinate system axes for debugging */}
-      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0)]} color="red" lineWidth={2} />
-      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 100, 0)]} color="green" lineWidth={2} />
-      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 100)]} color="blue" lineWidth={2} />
-      
-      {/* Origin marker */}
+      {/* Origin marker - scaled */}
       <mesh position={[0, 0, 0]}>
-        <sphereGeometry args={[5, 8, 8]} />
+        <sphereGeometry args={[5 * sceneScale, 8, 8]} />
         <meshStandardMaterial color="yellow" />
       </mesh>
+
+      {/* Rocket - scaled */}
+      <RocketSphere position={scaledRocketPosition} scale={sceneScale} />
       
-      {/* Rocket */}
-      <RocketSphere position={rocketPosition} />
-      
-      {/* Debug position indicator */}
+      {/* Debug position indicator - UNSCALED so it stays readable */}
       <Html position={[rocketPosition[0], rocketPosition[1] + 10, rocketPosition[2]]} center>
         <div style={{
           background: 'rgba(255, 255, 0, 0.9)',
@@ -470,54 +509,58 @@ function TrajectoryScene({
           fontSize: '10px',
           fontWeight: 'bold'
         }}>
-          [{rocketPosition[0].toFixed(1)}, {rocketPosition[1].toFixed(1)}, {rocketPosition[2].toFixed(1)}]
+          Pos: [{rocketPosition[0].toFixed(1)}, {rocketPosition[1].toFixed(1)}, {rocketPosition[2].toFixed(1)}]
+          <br />
+          Alt: {maxAltitudeInTrajectory.toFixed(1)}m | Scale: {sceneScale.toFixed(4)}x
         </div>
       </Html>
-      
-      {/* Altitude label */}
+
+      {/* Altitude label - UNSCALED position so it stays with rocket visually */}
       {currentTelemetry && (
         <AltitudeLabel 
-          position={rocketPosition} 
+          position={scaledRocketPosition} 
           altitude={currentTelemetry.altitude_m} 
         />
       )}
+
+      {/* Trajectory trail - scaled */}
+      <TrajectoryTrail points={scaledTrajectory} colors={trailColors} />
+
+      {/* Apogee marker - scaled */}
+      {scaledApogeePosition && <ApogeeMarker position={scaledApogeePosition} scale={sceneScale} />}
       
-      {/* Trajectory trail */}
-      <TrajectoryTrail points={trajectory} colors={trailColors} />
-      
-      {/* Apogee marker */}
-      {apogeePosition && <ApogeeMarker position={apogeePosition} />}
-      
-      {/* Ground plane */}
+      {/* Ground plane - scaled to match everything else */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[1000, 1000]} />
+        <planeGeometry args={[10000 * sceneScale, 10000 * sceneScale]} />
         <meshStandardMaterial color="#228B22" opacity={0.5} transparent />
       </mesh>
       
-      {/* Grid */}
-      <gridHelper args={[1000, 50]} position={[0, 0, 0]} />
-      
-      {/* Apogee prediction marker */}
-      {apogeePosition && (
+      {/* Grid - scaled to match everything else */}
+      <gridHelper args={[10000 * sceneScale, 100]} position={[0, 0, 0]} />
+
+      {/* Apogee prediction marker - scaled */}
+      {scaledApogeePosition && (
         <ApogeePredictionMarker 
-          position={apogeePosition} 
+          position={scaledApogeePosition} 
           prediction={{ 
             predicted_time: 10, // Placeholder
             detected: true,
             window_start: 8,
             window_end: 12
-          }} 
+          }}
+          scale={sceneScale}
         />
       )}
-      
-      {/* Velocity vector */}
+
+      {/* Velocity vector - scaled */}
       <VelocityVector 
-        position={rocketPosition} 
+        position={scaledRocketPosition} 
         velocity={[
-          currentTelemetry?.filtered_state?.velocity_ned[0] || 0,
-          currentTelemetry?.filtered_state?.velocity_ned[1] || 0,
-          currentTelemetry?.filtered_state?.velocity_ned[2] || 0
-        ]} 
+          (currentTelemetry?.filtered_state?.velocity_ned[0] || 0) * sceneScale,
+          (currentTelemetry?.filtered_state?.velocity_ned[1] || 0) * sceneScale,
+          (currentTelemetry?.filtered_state?.velocity_ned[2] || 0) * sceneScale
+        ]}
+        scale={sceneScale}
       />
       
       {/* Flight event markers */}
@@ -528,11 +571,11 @@ function TrajectoryScene({
 
 // Main component
 export default function Trajectory3D() {
-  const { currentTelemetry, maxAltitude } = useTelemetryStore();
+  const { currentTelemetry } = useTelemetryStore();
   const missionTime = useTelemetryStore(selectMissionTime);
-  
-  // Camera mode state
-  const [cameraMode, setCameraMode] = useState<CameraMode>(CameraMode.FOLLOW);
+  // Camera mode state - default to FREE so user has control
+  const [cameraMode, setCameraMode] = useState<CameraMode>(CameraMode.FREE);
+  const [maxAltitudeReached, setMaxAltitudeReached] = useState<number>(0);
   
   // Get flight phase from telemetry data
   const flightPhase = currentTelemetry?.flight_phase || 
@@ -630,11 +673,10 @@ export default function Trajectory3D() {
                 {speed.toFixed(1)}m/s
               </span>
             </div>
-            
-            <div>
+              <div>
               <span style={{ color: '#888' }}>Max Alt: </span>
               <span style={{ fontWeight: 'bold' }}>
-                {maxAltitude.toFixed(1)}m
+                {maxAltitudeReached.toFixed(1)}m
               </span>
             </div>
           </div>
@@ -673,19 +715,20 @@ export default function Trajectory3D() {
             Packets: {processingInfo.packet_count}
           </div>
         )}
-      </div>
-
-      {/* 3D Canvas */}
-      <div style={{ flex: 1 }}>
-        <Canvas>
-          <PerspectiveCamera makeDefault position={[100, 200, 300]} />
+      </div>      {/* 3D Canvas */}
+      <div style={{ flex: 1 }}>        <Canvas>
+          <PerspectiveCamera makeDefault position={[200, 150, 200]} />
           <OrbitControls 
             enablePan={true} 
             enableZoom={true}
             minDistance={50}
-            maxDistance={1000}
+            maxDistance={2000}
+            enableDamping={true}
+            dampingFactor={0.1}
+            target={[0, 50, 0]}
           />          <TrajectoryScene 
             cameraMode={cameraMode}
+            onMaxAltitudeChange={setMaxAltitudeReached}
           />
         </Canvas>
       </div>
