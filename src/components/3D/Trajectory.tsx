@@ -4,7 +4,128 @@ import { OrbitControls, PerspectiveCamera, Html, Line } from '@react-three/drei'
 import * as THREE from 'three';
 import { useTelemetryStore, selectMissionTime } from '../../stores/telemetry-store';
 
-// Blinking rocket sphere component
+// Camera modes enum
+enum CameraMode {
+  FREE = 'free',
+  FOLLOW = 'follow',
+  LOCK = 'lock',
+  OVERVIEW = 'overview'
+}
+
+// Enhanced camera controller with multiple viewing modes
+function CameraController({ 
+  rocketPosition, 
+  cameraMode, 
+  trajectory,
+  isActive 
+}: { 
+  rocketPosition: [number, number, number], 
+  cameraMode: CameraMode,
+  trajectory: THREE.Vector3[],
+  isActive: boolean
+}) {
+  const { camera } = useThree();
+  
+  // Calculate trajectory bounds for overview mode
+  const trajectoryBounds = useMemo(() => {
+    if (trajectory.length === 0) {
+      return { min: new THREE.Vector3(-100, -10, -100), max: new THREE.Vector3(100, 200, 100) };
+    }
+    
+    const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+    const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+    
+    trajectory.forEach(point => {
+      min.min(point);
+      max.max(point);
+    });
+    
+    // Add padding
+    const padding = 50;
+    min.subScalar(padding);
+    max.addScalar(padding);
+    
+    // Ensure minimum bounds
+    if (max.y - min.y < 100) {
+      max.y = Math.max(max.y, 200);
+      min.y = Math.min(min.y, -10);
+    }
+    
+    return { min, max };
+  }, [trajectory]);
+  
+  useFrame(() => {
+    if (!isActive) return;
+    
+    const [x, y, z] = rocketPosition;
+    const rocketPos = new THREE.Vector3(x, y, z);
+    
+    switch (cameraMode) {
+      case CameraMode.FOLLOW:
+        // Smooth following with offset
+        const followOffset = new THREE.Vector3(80, 120, 80);
+        const targetPosition = rocketPos.clone().add(followOffset);
+        
+        // Smooth camera movement
+        camera.position.lerp(targetPosition, 0.03);
+        
+        // Look at rocket with smooth transition
+        camera.lookAt(rocketPos);
+        break;
+        
+      case CameraMode.LOCK:
+        // Close lock-on to rocket with dynamic offset based on speed
+        const speed = trajectory.length > 1 ? 
+          trajectory[trajectory.length - 1].distanceTo(trajectory[trajectory.length - 2]) : 1;
+        
+        const lockDistance = Math.max(30, speed * 10); // Dynamic distance based on speed
+        const lockOffset = new THREE.Vector3(
+          lockDistance * 0.6, 
+          lockDistance * 0.8, 
+          lockDistance * 0.6
+        );
+        
+        const lockTargetPos = rocketPos.clone().add(lockOffset);
+        
+        // More aggressive following for lock mode
+        camera.position.lerp(lockTargetPos, 0.08);
+        camera.lookAt(rocketPos);
+        break;
+        
+      case CameraMode.OVERVIEW:
+        // Show entire trajectory with optimal viewing angle
+        const center = trajectoryBounds.min.clone().lerp(trajectoryBounds.max, 0.5);
+        const size = trajectoryBounds.max.clone().sub(trajectoryBounds.min);
+        
+        // Calculate optimal camera distance
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const distance = maxDim * 1.5;
+        
+        // Position camera to see entire trajectory
+        const overviewPos = center.clone().add(new THREE.Vector3(distance, distance * 0.8, distance));
+        
+        camera.position.lerp(overviewPos, 0.02);
+        camera.lookAt(center);
+        break;
+        
+      case CameraMode.FREE:
+      default:
+        // Free mode - let user control, but ensure rocket stays visible
+        const cameraToRocket = rocketPos.clone().sub(camera.position);
+        const distanceToRocket = cameraToRocket.length();
+        
+        // If rocket gets too far away, gently pull camera closer
+        if (distanceToRocket > 500) {
+          const pullDirection = cameraToRocket.normalize().multiplyScalar(10);
+          camera.position.add(pullDirection);
+        }
+        break;
+    }
+  });
+
+  return null;
+}
+
 function RocketSphere({ position }: { position: [number, number, number] }) {
   const meshRef = useRef<THREE.Mesh>(null);
   const [intensity, setIntensity] = useState(1);
@@ -198,7 +319,11 @@ function FlightEventMarkers({ events }: { events: any[] }) {
 }
 
 // Main trajectory scene
-function TrajectoryScene() {
+function TrajectoryScene({ 
+  cameraMode
+}: { 
+  cameraMode: CameraMode
+}) {
   const { currentTelemetry, events } = useTelemetryStore();
   const [trajectory, setTrajectory] = useState<THREE.Vector3[]>([]);
   const [trailColors, setTrailColors] = useState<string[]>([]);
@@ -208,6 +333,7 @@ function TrajectoryScene() {
   const flightPhase = currentTelemetry?.flight_phase || 
                       currentTelemetry?.flight_summary?.current_phase || 
                       'IDLE';
+                      
   const rocketPosition: [number, number, number] = useMemo(() => {
     if (!currentTelemetry) return [0, 0, 0];
     
@@ -235,6 +361,7 @@ function TrajectoryScene() {
       }
     }
   }, [currentTelemetry]);
+  
   // Update trajectory
   useEffect(() => {
     if (!currentTelemetry) return;
@@ -298,33 +425,26 @@ function TrajectoryScene() {
       }
       return newColors;
     });
-
+    
     // Check for apogee event
     const apogeeEvent = events.find(e => e.type === 'APOGEE_DETECTED');
     if (apogeeEvent && !apogeePosition) {
       setApogeePosition(rocketPosition);
     }
   }, [currentTelemetry, flightPhase, rocketPosition, events, apogeePosition]);
-  // Auto-adjust camera (less aggressive)
-  const { camera } = useThree();
-  useEffect(() => {
-    if (trajectory.length > 0) {
-      const lastPoint = trajectory[trajectory.length - 1];
-      // Only adjust camera if rocket moves significantly
-      const currentTarget = new THREE.Vector3();
-      camera.getWorldDirection(currentTarget);
-      const distance = lastPoint.distanceTo(currentTarget);
-      
-      if (distance > 50) { // Only adjust if rocket is far from current view
-        camera.lookAt(lastPoint);
-      }
-    }
-  }, [trajectory, camera]);
 
   return (
     <>
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} />
+      
+      {/* Camera Controller */}
+      <CameraController 
+        rocketPosition={rocketPosition}
+        cameraMode={cameraMode}
+        trajectory={trajectory}
+        isActive={true}
+      />
       
       {/* Coordinate system axes for debugging */}
       <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0)]} color="red" lineWidth={2} />
@@ -377,7 +497,7 @@ function TrajectoryScene() {
       {/* Grid */}
       <gridHelper args={[1000, 50]} position={[0, 0, 0]} />
       
-      {/* Apogee prediction marker - TEMPORARY */}
+      {/* Apogee prediction marker */}
       {apogeePosition && (
         <ApogeePredictionMarker 
           position={apogeePosition} 
@@ -390,7 +510,7 @@ function TrajectoryScene() {
         />
       )}
       
-      {/* Velocity vector - TEMPORARY */}
+      {/* Velocity vector */}
       <VelocityVector 
         position={rocketPosition} 
         velocity={[
@@ -400,7 +520,7 @@ function TrajectoryScene() {
         ]} 
       />
       
-      {/* Flight event markers - TEMPORARY */}
+      {/* Flight event markers */}
       <FlightEventMarkers events={events} />
     </>
   );
@@ -410,6 +530,9 @@ function TrajectoryScene() {
 export default function Trajectory3D() {
   const { currentTelemetry, maxAltitude } = useTelemetryStore();
   const missionTime = useTelemetryStore(selectMissionTime);
+  
+  // Camera mode state
+  const [cameraMode, setCameraMode] = useState<CameraMode>(CameraMode.FOLLOW);
   
   // Get flight phase from telemetry data
   const flightPhase = currentTelemetry?.flight_phase || 
@@ -444,7 +567,29 @@ export default function Trajectory3D() {
             <div style={{ fontSize: '12px', color: '#888' }}>
               Mission Time: {missionTime.toFixed(1)}s | 
               Filtered State: {currentTelemetry?.filtered_state ? 'Active' : 'Unavailable'}
-            </div>
+            </div>          </div>
+          
+          {/* Camera Mode Controls */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', color: '#888' }}>Camera:</span>
+            {Object.values(CameraMode).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setCameraMode(mode as CameraMode)}
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '11px',
+                  background: cameraMode === mode ? '#4a9eff' : '#444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase'
+                }}
+              >
+                {mode}
+              </button>
+            ))}
           </div>
           
           <div style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
@@ -539,8 +684,9 @@ export default function Trajectory3D() {
             enableZoom={true}
             minDistance={50}
             maxDistance={1000}
+          />          <TrajectoryScene 
+            cameraMode={cameraMode}
           />
-          <TrajectoryScene />
         </Canvas>
       </div>
 
