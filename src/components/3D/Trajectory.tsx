@@ -268,6 +268,167 @@ function VelocityVector({
   );
 }
 
+// Enhanced map component with terrain features
+function TerrainMap({ 
+  maxAltitude, 
+  rocketPosition,
+  sceneScale 
+}: { 
+  maxAltitude: number; 
+  rocketPosition: [number, number, number];
+  sceneScale: number;
+}) {
+  // Calculate map size based on altitude - zooms out as we go higher
+  const mapSize = Math.max(1000, maxAltitude * 6);
+  const gridDivisions = Math.max(20, Math.floor(mapSize / 50));
+  
+  return (
+    <group>
+      {/* Base terrain - multiple layers for depth */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2 * sceneScale, 0]}>
+        <planeGeometry args={[mapSize * sceneScale, mapSize * sceneScale]} />
+        <meshStandardMaterial color="#1a4d1a" opacity={0.8} transparent />
+      </mesh>
+      
+      {/* Main ground plane */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[mapSize * sceneScale, mapSize * sceneScale]} />
+        <meshStandardMaterial color="#2d5016" opacity={0.7} transparent />
+      </mesh>
+      
+      {/* Fine grid overlay */}
+      <gridHelper 
+        args={[mapSize * sceneScale, gridDivisions]} 
+        position={[0, 1 * sceneScale, 0]}
+        material={new THREE.LineBasicMaterial({ color: '#444444', opacity: 0.3, transparent: true })}
+      />
+      
+      {/* Major coordinate axes */}
+      <Line 
+        points={[
+          new THREE.Vector3(-mapSize * sceneScale / 2, 2 * sceneScale, 0), 
+          new THREE.Vector3(mapSize * sceneScale / 2, 2 * sceneScale, 0)
+        ]} 
+        color="#ff0000" 
+        lineWidth={3} 
+      />
+      <Line 
+        points={[
+          new THREE.Vector3(0, 2 * sceneScale, -mapSize * sceneScale / 2), 
+          new THREE.Vector3(0, 2 * sceneScale, mapSize * sceneScale / 2)
+        ]} 
+        color="#0000ff" 
+        lineWidth={3} 
+      />
+      
+      {/* Concentric distance circles */}
+      {[100, 250, 500, 1000, 2000, 5000].map(radius => {
+        if (radius * sceneScale <= mapSize * sceneScale / 2) {
+          return (
+            <mesh key={radius} rotation={[-Math.PI / 2, 0, 0]} position={[0, 3 * sceneScale, 0]}>
+              <ringGeometry args={[radius * sceneScale - 2 * sceneScale, radius * sceneScale + 2 * sceneScale, 64]} />
+              <meshStandardMaterial 
+                color={radius <= 500 ? "#ffff00" : radius <= 1000 ? "#ff8800" : "#ff0000"} 
+                opacity={0.2} 
+                transparent 
+              />
+            </mesh>
+          );
+        }
+        return null;
+      })}
+      
+      {/* Cardinal direction markers */}
+      {[
+        { pos: [0, 5 * sceneScale, mapSize * sceneScale / 3], label: "NORTH", color: "#00ff00" },
+        { pos: [0, 5 * sceneScale, -mapSize * sceneScale / 3], label: "SOUTH", color: "#00ff00" },
+        { pos: [mapSize * sceneScale / 3, 5 * sceneScale, 0], label: "EAST", color: "#ff0000" },
+        { pos: [-mapSize * sceneScale / 3, 5 * sceneScale, 0], label: "WEST", color: "#ff0000" }
+      ].map((marker, index) => (
+        <Html key={index} position={marker.pos as [number, number, number]} center>
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.8)',
+            color: marker.color,
+            padding: '4px 8px',
+            borderRadius: '4px',
+            fontSize: '12px',
+            fontWeight: 'bold',
+            border: `1px solid ${marker.color}`
+          }}>
+            {marker.label}
+          </div>
+        </Html>
+      ))}
+      
+      {/* Distance markers at regular intervals */}
+      {[100, 250, 500, 1000, 2000, 5000].map(distance => {
+        if (distance * sceneScale <= mapSize * sceneScale / 2) {
+          return (
+            <group key={distance}>
+              {/* Markers on each axis */}
+              {[
+                { pos: [distance * sceneScale, 5 * sceneScale, 0], label: `${distance}m E` },
+                { pos: [-distance * sceneScale, 5 * sceneScale, 0], label: `${distance}m W` },
+                { pos: [0, 5 * sceneScale, distance * sceneScale], label: `${distance}m N` },
+                { pos: [0, 5 * sceneScale, -distance * sceneScale], label: `${distance}m S` }
+              ].map((marker, index) => (
+                <Html key={index} position={marker.pos as [number, number, number]} center>
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    color: 'black',
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    border: '1px solid #ccc'
+                  }}>
+                    {marker.label}
+                  </div>
+                </Html>
+              ))}
+            </group>
+          );
+        }
+        return null;
+      })}
+        {/* Launch pad tower - tall yellow cylinder */}
+      <mesh position={[0, 20 * sceneScale, 0]}>
+        <cylinderGeometry args={[2 * sceneScale, 2 * sceneScale, 40 * sceneScale, 8]} />
+        <meshStandardMaterial color="#ffff00" emissive="#ffff00" emissiveIntensity={0.5} />
+      </mesh>
+      
+      {/* Launch pad base */}
+      <mesh position={[0, 2 * sceneScale, 0]}>
+        <cylinderGeometry args={[8 * sceneScale, 8 * sceneScale, 4 * sceneScale, 16]} />
+        <meshStandardMaterial color="#888888" />
+      </mesh>
+        {/* Removed launch site label - info moved to top panel */}
+      
+      {/* Predicted landing zone */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 4 * sceneScale, 0]}>
+        <ringGeometry args={[95 * sceneScale, 105 * sceneScale, 32]} />
+        <meshStandardMaterial color="#00ffff" opacity={0.3} transparent />
+      </mesh>
+      
+      {/* Current rocket position marker on ground */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[rocketPosition[0], 1 * sceneScale, rocketPosition[2]]}>
+        <circleGeometry args={[5 * sceneScale, 16]} />
+        <meshStandardMaterial color="#ff0000" opacity={0.7} transparent />
+      </mesh>
+      
+      {/* Ground track line from launch to current position */}
+      <Line 
+        points={[
+          new THREE.Vector3(0, 1 * sceneScale, 0),
+          new THREE.Vector3(rocketPosition[0], 1 * sceneScale, rocketPosition[2])
+        ]} 
+        color="#ff00ff" 
+        lineWidth={2} 
+      />
+    </group>
+  );
+}
+
 // Flight event markers component
 function FlightEventMarkers({ events }: { events: any[] }) {
   return (
@@ -497,23 +658,7 @@ function TrajectoryScene({
       </mesh>
 
       {/* Rocket - scaled */}
-      <RocketSphere position={scaledRocketPosition} scale={sceneScale} />
-      
-      {/* Debug position indicator - UNSCALED so it stays readable */}
-      <Html position={[rocketPosition[0], rocketPosition[1] + 10, rocketPosition[2]]} center>
-        <div style={{
-          background: 'rgba(255, 255, 0, 0.9)',
-          color: 'black',
-          padding: '2px 4px',
-          borderRadius: '2px',
-          fontSize: '10px',
-          fontWeight: 'bold'
-        }}>
-          Pos: [{rocketPosition[0].toFixed(1)}, {rocketPosition[1].toFixed(1)}, {rocketPosition[2].toFixed(1)}]
-          <br />
-          Alt: {maxAltitudeInTrajectory.toFixed(1)}m | Scale: {sceneScale.toFixed(4)}x
-        </div>
-      </Html>
+      <RocketSphere position={scaledRocketPosition} scale={sceneScale} />      {/* Removed debug position indicator - info moved to top panel */}
 
       {/* Altitude label - UNSCALED position so it stays with rocket visually */}
       {currentTelemetry && (
@@ -527,16 +672,12 @@ function TrajectoryScene({
       <TrajectoryTrail points={scaledTrajectory} colors={trailColors} />
 
       {/* Apogee marker - scaled */}
-      {scaledApogeePosition && <ApogeeMarker position={scaledApogeePosition} scale={sceneScale} />}
-      
-      {/* Ground plane - scaled to match everything else */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[10000 * sceneScale, 10000 * sceneScale]} />
-        <meshStandardMaterial color="#228B22" opacity={0.5} transparent />
-      </mesh>
-      
-      {/* Grid - scaled to match everything else */}
-      <gridHelper args={[10000 * sceneScale, 100]} position={[0, 0, 0]} />
+      {scaledApogeePosition && <ApogeeMarker position={scaledApogeePosition} scale={sceneScale} />}      {/* Enhanced terrain map that grows with altitude */}
+      <TerrainMap 
+        maxAltitude={maxAltitudeInTrajectory}
+        rocketPosition={scaledRocketPosition}
+        sceneScale={sceneScale}
+      />
 
       {/* Apogee prediction marker - scaled */}
       {scaledApogeePosition && (
@@ -634,8 +775,7 @@ export default function Trajectory3D() {
               </button>
             ))}
           </div>
-          
-          <div style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
+            <div style={{ display: 'flex', gap: '20px', fontSize: '14px' }}>
             <div>
               <span style={{ color: '#888' }}>Phase: </span>
               <span style={{ 
@@ -673,10 +813,45 @@ export default function Trajectory3D() {
                 {speed.toFixed(1)}m/s
               </span>
             </div>
-              <div>
+            
+            <div>
               <span style={{ color: '#888' }}>Max Alt: </span>
               <span style={{ fontWeight: 'bold' }}>
                 {maxAltitudeReached.toFixed(1)}m
+              </span>
+            </div>
+          </div>
+          
+          {/* GPS and Position Information */}
+          <div style={{ display: 'flex', gap: '20px', fontSize: '12px', marginTop: '8px' }}>
+            <div>
+              <span style={{ color: '#888' }}>Launch Pad: </span>
+              <span style={{ fontWeight: 'bold', color: '#ffff00' }}>
+                28.396837°N, -80.605659°W
+              </span>
+            </div>
+            
+            <div>
+              <span style={{ color: '#888' }}>Current GPS: </span>
+              <span style={{ fontWeight: 'bold' }}>
+                {currentTelemetry?.latitude_deg?.toFixed(6) || 'N/A'}°N, {currentTelemetry?.longitude_deg?.toFixed(6) || 'N/A'}°W
+              </span>
+            </div>
+            
+            <div>
+              <span style={{ color: '#888' }}>NED Position: </span>
+              <span style={{ fontWeight: 'bold' }}>
+                [{(currentTelemetry?.filtered_state?.position_ned[0] || 0).toFixed(1)}, {(currentTelemetry?.filtered_state?.position_ned[1] || 0).toFixed(1)}] m
+              </span>
+            </div>
+            
+            <div>
+              <span style={{ color: '#888' }}>GPS Valid: </span>
+              <span style={{ 
+                fontWeight: 'bold',
+                color: currentTelemetry?.quality?.gps_valid ? '#00ff00' : '#ff0000'
+              }}>
+                {currentTelemetry?.quality?.gps_valid ? 'YES' : 'NO'}
               </span>
             </div>
           </div>
