@@ -6,12 +6,13 @@ import UnifiedChart from './components/Charts/UnifiedChart';
 import CommandPanel from './components/Command/CommandPanel';
 import GPSMap from './components/Map/GPSMap';
 import RocketOrientation from './components/3D/RocketOrientation';
+import Trajectory3D from './components/3D/Trajectory';
 import SimulationPanel from './components/Simulation/SimulationPanel';
 import { SerialPortControls } from './components/Controls/SerialPortControls';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'map' | 'command' | 'controls' | 'simulation'>('telemetry');
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'trajectory' | 'map' | 'command' | 'controls' | 'simulation'>('telemetry');
   const { connectionStatus, setConnectionStatus, updateTelemetry, addEvent } = useTelemetryStore();
 
   useEffect(() => {
@@ -67,19 +68,24 @@ function App() {
           onClick={() => setActiveTab('charts')}
         >
           Charts
-        </button>
-        <button 
+        </button>        <button 
           className={activeTab === '3d' ? 'active' : ''}
           onClick={() => setActiveTab('3d')}
         >
           3D View
         </button>
         <button 
+          className={activeTab === 'trajectory' ? 'active' : ''}
+          onClick={() => setActiveTab('trajectory')}
+        >
+          Trajectory
+        </button>
+        <button 
           className={activeTab === 'map' ? 'active' : ''}
           onClick={() => setActiveTab('map')}
         >
           Map
-        </button>        <button 
+        </button><button 
           className={activeTab === 'command' ? 'active' : ''}
           onClick={() => setActiveTab('command')}
         >
@@ -99,6 +105,7 @@ function App() {
         </button>
       </nav>      <main className="app-main">
         {activeTab === 'telemetry' && <TelemetryDisplay />}        {activeTab === 'charts' && <UnifiedChart />}{activeTab === '3d' && <RocketOrientation />}
+        {activeTab === 'trajectory' && <Trajectory3D />}
         {activeTab === 'map' && <GPSMap />}
         {activeTab === 'command' && <CommandPanel />}
         {activeTab === 'controls' && <SerialPortControls />}

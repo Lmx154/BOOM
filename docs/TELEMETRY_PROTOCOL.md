@@ -261,7 +261,6 @@ Commands sent to the GS use bracketed format:
 <CMD:ENTER_TEST>                    //Enter test mode
 ```
 
-
 #### Command Responses
 
 ##### Success Responses

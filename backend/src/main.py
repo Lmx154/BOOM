@@ -14,7 +14,7 @@ from .communication.websocket_manager import WebSocketManager
 from .communication.command_handler import CommandHandler
 from .telemetry.protocol import BrunitoParser
 from .telemetry.validation import DataValidator
-from .processing.event_detector import EventDetector
+from .telemetry.event_detector import EventDetectorProcessor
 from .processing.data_logger import DataLogger
 from .simulator.brunito_simulator import BrunitoSimulator
 
@@ -31,7 +31,7 @@ websocket_manager = WebSocketManager()
 command_handler = CommandHandler(serial_manager)
 parser = BrunitoParser()
 validator = DataValidator()
-event_detector = EventDetector()
+event_detector = EventDetectorProcessor()
 data_logger = DataLogger()
 simulator = None
 
