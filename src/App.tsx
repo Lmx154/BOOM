@@ -13,14 +13,16 @@ import './App.css';
 
 function App() {
   const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'trajectory' | 'map' | 'command' | 'controls' | 'simulation'>('telemetry');
-  const { connectionStatus, setConnectionStatus, updateTelemetry, addEvent } = useTelemetryStore();
+  const connectionStatus = useTelemetryStore((state) => state.connectionStatus);
+  const setConnectionStatus = useTelemetryStore((state) => state.setConnectionStatus);
+  const updateTelemetry = useTelemetryStore((state) => state.updateTelemetry);
+  const addEvent = useTelemetryStore((state) => state.addEvent);
 
   useEffect(() => {
     // Connect to WebSocket
-    wsClient.connect();
-
-    // Set up event listeners
+    wsClient.connect();    // Set up event listeners
     const unsubTelemetry = wsClient.onTelemetry((packet) => {
+      console.log('App.tsx received telemetry packet:', packet);
       updateTelemetry(packet);
       
       // Add any events

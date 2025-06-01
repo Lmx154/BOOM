@@ -19,10 +19,15 @@ interface TelemetryState {
   // Mission info
   missionStartTime: Date | null;
   maxAltitude: number;
+  
   // Serial port management
   serialPort: string | null;
   serialPorts: SerialPort[];
   isSerialConnected: boolean;
+  
+  // Simulator management
+  isSimulatorActive: boolean;
+  simulatorProfile: string | null;
   
   // Actions
   setConnectionStatus: (status: ConnectionStatus) => void;
@@ -35,6 +40,9 @@ interface TelemetryState {
   openSerial: (port: string) => Promise<void>;
   closeSerial: () => Promise<void>;
   writeToSerial: (data: string) => Promise<void>;
+  
+  // Simulator actions
+  setSimulatorStatus: (active: boolean, profile?: string) => void;
 }
 
 export const useTelemetryStore = create<TelemetryState>((set, get) => ({
@@ -46,16 +54,19 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
   events: [],
   missionStartTime: null,
   maxAltitude: 0,
-  
-  // Serial port state
+    // Serial port state
   serialPort: null,
   serialPorts: [],
   isSerialConnected: false,
   
+  // Simulator state
+  isSimulatorActive: false,
+  simulatorProfile: null,
+  
   // Actions
   setConnectionStatus: (status) => set({ connectionStatus: status }),
-  
-  updateTelemetry: (packet) => {
+    updateTelemetry: (packet) => {
+    console.log('Updating telemetry store with packet:', packet);
     const state = get();
     
     // Update history (circular buffer)
@@ -69,13 +80,14 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
     
     // Set mission start time on first packet
     const missionStartTime = state.missionStartTime || new Date();
-    
-    set({
+      set({
       currentTelemetry: packet,
       telemetryHistory: newHistory,
       maxAltitude,
       missionStartTime
     });
+    console.log('Telemetry store updated. Current altitude:', packet.altitude_m);
+    console.log('Store state after update:', get());
   },
   
   addEvent: (event) => set((state) => ({
@@ -126,7 +138,6 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
       throw error;
     }
   },
-
   writeToSerial: async (data: string) => {
     try {
       await serialPortAPI.writeToPort(data);
@@ -134,6 +145,14 @@ export const useTelemetryStore = create<TelemetryState>((set, get) => ({
       console.error('Failed to write to serial port:', error);
       throw error;
     }
+  },
+  
+  // Simulator actions
+  setSimulatorStatus: (active: boolean, profile?: string) => {
+    set({ 
+      isSimulatorActive: active,
+      simulatorProfile: profile || null
+    });
   }
 }));
 

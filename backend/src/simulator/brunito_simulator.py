@@ -23,10 +23,9 @@ class BrunitoSimulator:
         self.position = [0.0, 0.0, 0.0]  # x, y, z in meters
         self.velocity = [0.0, 0.0, 0.0]  # m/s
         self.acceleration = [0.0, 0.0, -9.81]  # m/s²
-        
-        # Launch site
-        self.launch_lat = 28.396837
-        self.launch_lon = -80.605659
+          # Launch site - Starbase, Texas (SpaceX Starbase facility)
+        self.launch_lat = 25.997222
+        self.launch_lon = -97.155556
         self.launch_alt = 3.0  # meters ASL
         
         # Sensor parameters

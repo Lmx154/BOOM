@@ -42,11 +42,9 @@ function GPSMap() {
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainer.current) return;
-
-    // Initialize Leaflet map
+    if (!mapContainer.current) return;    // Initialize Leaflet map
     map.current = L.map(mapContainer.current, {
-      center: [28.396837, -80.605659], // Cape Canaveral (lat, lng)
+      center: [25.997222, -97.155556], // Starbase, Texas (lat, lng)
       zoom: 12,
       zoomControl: true
     });

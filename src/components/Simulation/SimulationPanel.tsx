@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SimulatorStatus, SimulatorResponse } from '../../types/telemetry';
+import { useTelemetryStore } from '../../stores/telemetry-store';
 import './SimulationPanel.css';
 
 const FLIGHT_PROFILES = [
@@ -13,6 +14,8 @@ function SimulationPanel() {
   const [selectedProfile, setSelectedProfile] = useState('suborbital_hop');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string>('');
+  
+  const { setSimulatorStatus: updateStoreSimulatorStatus, isSerialConnected, closeSerial } = useTelemetryStore();
 
   useEffect(() => {
     fetchSimulatorStatus();
@@ -25,23 +28,30 @@ function SimulationPanel() {
 
     return () => clearInterval(interval);
   }, [simulatorStatus.active]);
-
   const fetchSimulatorStatus = async () => {
     try {
       const response = await fetch('http://localhost:8000/simulator/status');
       const status: SimulatorStatus = await response.json();
       setSimulatorStatus(status);
+      
+      // Update telemetry store
+      updateStoreSimulatorStatus(status.active, status.profile);
     } catch (error) {
       console.error('Failed to fetch simulator status:', error);
       setMessage('Failed to connect to backend');
     }
   };
-
   const startSimulator = async () => {
     setLoading(true);
     setMessage('Starting simulator...');
     
     try {
+      // Close serial port if connected to prevent conflicts
+      if (isSerialConnected) {
+        setMessage('Closing serial port and starting simulator...');
+        await closeSerial();
+      }
+      
       const response = await fetch(`http://localhost:8000/simulator/start/${selectedProfile}`, {
         method: 'POST'
       });
@@ -111,11 +121,15 @@ function SimulationPanel() {
           <span className="status-indicator"></span>
           {simulatorStatus.active ? 'Active' : 'Inactive'}
         </div>
-      </div>
-
-      {message && (
+      </div>      {message && (
         <div className={`message ${message.includes('Failed') || message.includes('error') ? 'error' : 'info'}`}>
           {message}
+        </div>
+      )}
+
+      {!simulatorStatus.active && isSerialConnected && (
+        <div className="message info">
+          ⚠️ Serial port is currently connected. Starting the simulator will close the serial connection.
         </div>
       )}
 

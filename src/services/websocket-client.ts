@@ -20,17 +20,17 @@ class WebSocketClient {
   constructor(url: string = 'ws://localhost:8000/ws') {
     this.url = url;
   }
-
   connect() {
     if (this.ws?.readyState === WebSocket.OPEN) {
       return;
     }
 
+    console.log('WebSocket attempting to connect to:', this.url);
     try {
       this.ws = new WebSocket(this.url);
       
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected successfully');
         this.notifyStatus('connected');
         
         // Clear any reconnect timer
@@ -38,23 +38,24 @@ class WebSocketClient {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
         }
-      };
-
-      this.ws.onmessage = (event) => {
+      };this.ws.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
           
           switch (message.type) {
             case 'telemetry':
+              console.log('Received telemetry packet:', message.data);
               this.telemetryCallbacks.forEach(cb => cb(message.data as TelemetryPacket));
               break;
               
             case 'event':
+              console.log('Received event:', message.data);
               this.eventCallbacks.forEach(cb => cb(message.data));
               break;
               
             case 'command_response':
               const response = message.data as CommandResponse;
+              console.log('Received command response:', response);
               // Handle command responses
               break;
           }

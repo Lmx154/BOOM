@@ -9,7 +9,8 @@ export function SerialPortControls() {
     serialPorts, 
     refreshPorts, 
     openSerial, 
-    closeSerial 
+    closeSerial,
+    isSimulatorActive
   } = useTelemetryStore();
   
   const [selected, setSelected] = useState<string>(serialPort ?? "");
@@ -90,21 +91,25 @@ export function SerialPortControls() {
     } finally {
       setIsLoading(false);
     }
-  };
-  return (
+  };  return (
     <div className="serial-port-controls">
       <h3>Serial Port Control</h3>
+      
+      {isSimulatorActive && (
+        <div className="simulator-warning">
+          <span>⚠️ Simulator is active. Serial port controls are disabled.</span>
+        </div>
+      )}
       
       <div className="serial-status">
         <span className={`status-indicator ${serialPort ? 'connected' : 'disconnected'}`}></span>
         {serialPort ? `Connected: ${serialPort}` : 'Disconnected'}
       </div>
       
-      <div className="serial-controls-row">
-        <select 
+      <div className="serial-controls-row">        <select 
           value={selected} 
           onChange={e => setSelected(e.target.value)}
-          disabled={isLoading}
+          disabled={isLoading || isSimulatorActive}
           className="serial-port-select"
         >
           <option value="" disabled>
@@ -127,10 +132,9 @@ export function SerialPortControls() {
             );
           })}
         </select>
-        
-        <button 
+          <button 
           onClick={handleRefreshPorts}
-          disabled={isLoading}
+          disabled={isLoading || isSimulatorActive}
           className="btn-secondary"
         >
           {isLoading ? <span className="loading-spinner"></span> : 'Refresh'}
@@ -138,17 +142,16 @@ export function SerialPortControls() {
         
         <button 
           onClick={testAllPorts}
-          disabled={isTesting || serialPorts.length === 0}
+          disabled={isTesting || serialPorts.length === 0 || isSimulatorActive}
           className="btn-secondary"
         >
           {isTesting ? <span className="loading-spinner"></span> : 'Test Ports'}
         </button>
       </div>
-      
-      <div className="serial-controls-row">
+        <div className="serial-controls-row">
         <button 
           onClick={handleOpenPort} 
-          disabled={!selected || isLoading || serialPort === selected}
+          disabled={!selected || isLoading || serialPort === selected || isSimulatorActive}
           className="btn-primary"
         >
           {isLoading ? 'Opening...' : 'Connect'}
@@ -156,7 +159,7 @@ export function SerialPortControls() {
         
         <button 
           onClick={handleClosePort} 
-          disabled={!serialPort || isLoading}
+          disabled={!serialPort || isLoading || isSimulatorActive}
           className="btn-danger"
         >
           {isLoading ? 'Closing...' : 'Disconnect'}

@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     SERIAL_PORT: str = "auto"  # Use "auto" to auto-detect, or specify like "COM3" or "/dev/ttyUSB0"
     SERIAL_BAUDRATE: int = 921600
     SERIAL_TIMEOUT: float = 0.1    # Simulator settings
-    USE_SIMULATOR: bool = False  # Disabled by default, can be enabled via Controls tab
+    USE_SIMULATOR: bool = True  # Enabled for testing
     SIMULATOR_PROFILE: str = "suborbital_hop"
     
     # System settings

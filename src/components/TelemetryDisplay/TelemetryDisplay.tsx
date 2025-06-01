@@ -3,7 +3,12 @@ import TelemetryCard from './TelemetryCard';
 import './TelemetryDisplay.css';
 
 function TelemetryDisplay() {
-  const { currentTelemetry, maxAltitude, events } = useTelemetryStore();
+  const currentTelemetry = useTelemetryStore((state) => state.currentTelemetry);
+  const maxAltitude = useTelemetryStore((state) => state.maxAltitude);
+  const events = useTelemetryStore((state) => state.events);
+  
+  // Debug logging to check if component is re-rendering
+  console.log('TelemetryDisplay render - currentTelemetry:', currentTelemetry);
 
   if (!currentTelemetry) {
     return (
