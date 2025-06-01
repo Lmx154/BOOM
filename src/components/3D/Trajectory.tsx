@@ -208,7 +208,6 @@ function TrajectoryScene() {
   const flightPhase = currentTelemetry?.flight_phase || 
                       currentTelemetry?.flight_summary?.current_phase || 
                       'IDLE';
-  
   const rocketPosition: [number, number, number] = useMemo(() => {
     if (!currentTelemetry) return [0, 0, 0];
     
@@ -217,18 +216,41 @@ function TrajectoryScene() {
       const ned = currentTelemetry.filtered_state.position_ned;
       return [ned[0], currentTelemetry.filtered_state.altitude, ned[1]]; // North, Up, East
     } else {
-      // Simple conversion - in real implementation, use proper coordinate transformation
-      const x = (currentTelemetry.longitude_deg + 80.605659) * 100000;
-      const y = currentTelemetry.altitude_m;
-      const z = (currentTelemetry.latitude_deg - 28.396837) * 100000;
+      // Check for valid GPS coordinates first
+      const hasValidGPS = currentTelemetry.quality?.gps_valid || 
+                          (Math.abs(currentTelemetry.latitude_deg) > 0.001 && 
+                           Math.abs(currentTelemetry.longitude_deg) > 0.001);
       
-      return [x, y, z];
+      if (hasValidGPS) {
+        // Simple local coordinate conversion - use smaller scale factors for visualization
+        // This creates a local coordinate system centered at the launch site
+        const x = (currentTelemetry.longitude_deg + 80.605659) * 111320; // ~111.32km per degree longitude
+        const y = currentTelemetry.altitude_m; // Keep altitude as-is
+        const z = (currentTelemetry.latitude_deg - 28.396837) * 110540; // ~110.54km per degree latitude
+        
+        return [x, y, z];
+      } else {
+        // No valid GPS, just use altitude with origin at 0,0
+        return [0, currentTelemetry.altitude_m, 0];
+      }
     }
   }, [currentTelemetry]);
-
   // Update trajectory
   useEffect(() => {
     if (!currentTelemetry) return;
+
+    // Safety check: ensure position is reasonable
+    const [x, y, z] = rocketPosition;
+    const distanceFromOrigin = Math.sqrt(x * x + y * y + z * z);
+    
+    // If position is extremely far (> 100km from origin), likely a coordinate system issue
+    if (distanceFromOrigin > 100000) {
+      console.warn('3D Trajectory - Position too far from origin:', { 
+        position: rocketPosition, 
+        distance: distanceFromOrigin 
+      });
+      return; // Skip this update
+    }
 
     const newPoint = new THREE.Vector3(...rocketPosition);
     
@@ -258,8 +280,24 @@ function TrajectoryScene() {
         color = '#00ff00'; // Green - armed/idle
     }
 
-    setTrajectory(prev => [...prev, newPoint]);
-    setTrailColors(prev => [...prev, color]);
+    // Limit trajectory points to prevent memory issues and improve performance
+    const maxTrajectoryPoints = 1000;
+    
+    setTrajectory(prev => {
+      const newTrajectory = [...prev, newPoint];
+      if (newTrajectory.length > maxTrajectoryPoints) {
+        newTrajectory.shift(); // Remove oldest point
+      }
+      return newTrajectory;
+    });
+    
+    setTrailColors(prev => {
+      const newColors = [...prev, color];
+      if (newColors.length > maxTrajectoryPoints) {
+        newColors.shift(); // Remove oldest color
+      }
+      return newColors;
+    });
 
     // Check for apogee event
     const apogeeEvent = events.find(e => e.type === 'APOGEE_DETECTED');
@@ -267,13 +305,19 @@ function TrajectoryScene() {
       setApogeePosition(rocketPosition);
     }
   }, [currentTelemetry, flightPhase, rocketPosition, events, apogeePosition]);
-
-  // Auto-adjust camera
+  // Auto-adjust camera (less aggressive)
   const { camera } = useThree();
   useEffect(() => {
     if (trajectory.length > 0) {
       const lastPoint = trajectory[trajectory.length - 1];
-      camera.lookAt(lastPoint);
+      // Only adjust camera if rocket moves significantly
+      const currentTarget = new THREE.Vector3();
+      camera.getWorldDirection(currentTarget);
+      const distance = lastPoint.distanceTo(currentTarget);
+      
+      if (distance > 50) { // Only adjust if rocket is far from current view
+        camera.lookAt(lastPoint);
+      }
     }
   }, [trajectory, camera]);
 
@@ -282,8 +326,33 @@ function TrajectoryScene() {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} />
       
+      {/* Coordinate system axes for debugging */}
+      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(100, 0, 0)]} color="red" lineWidth={2} />
+      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 100, 0)]} color="green" lineWidth={2} />
+      <Line points={[new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 100)]} color="blue" lineWidth={2} />
+      
+      {/* Origin marker */}
+      <mesh position={[0, 0, 0]}>
+        <sphereGeometry args={[5, 8, 8]} />
+        <meshStandardMaterial color="yellow" />
+      </mesh>
+      
       {/* Rocket */}
       <RocketSphere position={rocketPosition} />
+      
+      {/* Debug position indicator */}
+      <Html position={[rocketPosition[0], rocketPosition[1] + 10, rocketPosition[2]]} center>
+        <div style={{
+          background: 'rgba(255, 255, 0, 0.9)',
+          color: 'black',
+          padding: '2px 4px',
+          borderRadius: '2px',
+          fontSize: '10px',
+          fontWeight: 'bold'
+        }}>
+          [{rocketPosition[0].toFixed(1)}, {rocketPosition[1].toFixed(1)}, {rocketPosition[2].toFixed(1)}]
+        </div>
+      </Html>
       
       {/* Altitude label */}
       {currentTelemetry && (

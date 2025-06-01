@@ -52,11 +52,10 @@ class BrunitoSimulator:
         """Generate a Brunito format telemetry packet."""
         # Update physics
         self._update_physics()
-        
-        # Get current datetime
+          # Get current datetime with microsecond precision
         now = datetime.now() + timedelta(seconds=self.time)
         date_str = now.strftime("%m/%d/%Y")
-        time_str = now.strftime("%H:%M:%S")
+        time_str = now.strftime("%H:%M:%S.%f")
         
         # Calculate values
         altitude = self.launch_alt + self.position[2]

@@ -136,8 +136,13 @@ class BrunitoParser:
             return None
     
     def _parse_timestamp(self, date_str: str, time_str: str) -> datetime:
-        """Parse MM/DD/YYYY,HH:MM:SS format."""
-        return datetime.strptime(f"{date_str},{time_str}", "%m/%d/%Y,%H:%M:%S")
+        """Parse MM/DD/YYYY,HH:MM:SS.ffffff format with fallback to HH:MM:SS."""
+        try:
+            # Try with microseconds first
+            return datetime.strptime(f"{date_str},{time_str}", "%m/%d/%Y,%H:%M:%S.%f")
+        except ValueError:
+            # Fallback to seconds only for backward compatibility
+            return datetime.strptime(f"{date_str},{time_str}", "%m/%d/%Y,%H:%M:%S")
     
     def _calculate_derived_values(self, data: Dict) -> Dict:
         """Calculate derived values from raw telemetry."""

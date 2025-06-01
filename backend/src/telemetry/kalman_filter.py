@@ -62,11 +62,15 @@ class ExtendedKalmanFilter:
         self.R_accel = np.diag([0.05, 0.05, 0.05])  # Accelerometer noise (m/s²)
         self.R_gyro = np.diag([0.001, 0.001, 0.001])  # Gyro noise (rad/s)
         self.R_baro = 2.0  # Barometer noise (m)
+        self.R_mag = np.diag([0.5, 0.5, 0.5])  # Magnetometer noise (µT)
+        
+        # Earth's magnetic field reference (NED frame, typical values for North America)
+        # This should ideally be looked up based on GPS position using IGRF model
+        self.mag_ref_ned = np.array([20.0, -30.0, 40.0])  # [North, East, Down] in µT
         
         # Gravity vector (NED frame)
         self.gravity = np.array([0, 0, 9.81])
-        
-        # Last update time
+          # Last update time
         self.last_update_time = None
         
         # Earth parameters
@@ -189,6 +193,30 @@ class ExtendedKalmanFilter:
         self.state += K.flatten() * y
         self.P = (np.eye(15) - np.outer(K, H)) @ self.P
         
+    def update_mag(self, mag: np.ndarray):
+        """
+        Update with magnetometer measurement (for heading correction)
+        """
+        H = np.zeros((3, 15))
+        H[0:3, 6:9] = np.eye(3)  # Quaternion to rotate NED magnetic field to body frame
+        
+        # Expected magnetic field in body frame (from current quaternion)
+        mag_body_expected = self._rotate_vector(self.mag_ref_ned, self.state[6:10])
+        
+        y = mag - mag_body_expected  # Innovation: measured mag - expected mag in body frame
+        
+        S = H @ self.P @ H.T + self.R_mag
+        try:
+            K = self.P @ H.T @ np.linalg.inv(S)
+        except np.linalg.LinAlgError:
+            logger.warning("Singular matrix S in Mag update, skipping update step.")
+            return
+            
+        self.state += K @ y
+        self.P = (np.eye(15) - K @ H) @ self.P
+        
+        self.state[6:10] /= np.linalg.norm(self.state[6:10]) # Normalize quaternion
+        
     def get_state(self) -> dict:
         """
         Get current estimated state in user-friendly format
@@ -258,13 +286,13 @@ class ExtendedKalmanFilter:
         # or use a simpler orientation update if this becomes a bottleneck.
         # Returning zeros means this part of the measurement update for IMU (accel affecting quat) is simplified.
         return np.zeros((3, 4))
-
+    
     def _gps_to_ned(self, lat: float, lon: float, alt: float) -> np.ndarray:
-        # Reference point (launch site - should be configurable or set at init)
-        # Using fixed reference for now
-        ref_lat_rad = np.radians(28.396837) # Cape Canaveral example
-        ref_lon_rad = np.radians(-80.605659)
-        ref_alt = 3.0 
+        # Reference point (launch site - Starbase, Texas)
+        # Using Starbase coordinates to match simulator
+        ref_lat_rad = np.radians(25.997222)  # Starbase, Texas latitude
+        ref_lon_rad = np.radians(-97.155556)  # Starbase, Texas longitude
+        ref_alt = 8.0  # Starbase elevation
 
         lat_rad = np.radians(lat)
         lon_rad = np.radians(lon)
@@ -332,6 +360,9 @@ class ExtendedKalmanFilter:
         if measurement.baro_alt is not None:
             self.update_baro(measurement.baro_alt)
             
+        if measurement.mag is not None:
+            self.update_mag(measurement.mag)
+            
     def check_filter_health(self) -> dict:
         cov_diag = np.diag(self.P)
         
@@ -384,55 +415,44 @@ class ExtendedKalmanFilter:
             'max_uncertainty': float(max_unc_val)
         }
 
-# Integration with the telemetry processor
-class KalmanFilterProcessor:
-    """
-    Wrapper class to integrate Kalman filter with telemetry system
-    """
-    
-    def __init__(self):
-        self.ekf = ExtendedKalmanFilter()
-        self.last_timestamp_ns = None # Store timestamp in nanoseconds for higher precision dt
-        self.initialized = False
-        
     def process_telemetry(self, telemetry: dict) -> dict:
         """
         Process telemetry packet and return filtered state
         """
         try:
             current_time_obj = datetime.fromisoformat(telemetry['timestamp'])
-            current_timestamp_ns = current_time_obj.timestamp() * 1e9 # nanoseconds
+            current_timestamp_s = current_time_obj.timestamp()
             
-            dt = 0.0
-            if self.last_timestamp_ns is None or not self.initialized:
-                # For the first packet, or if re-initializing, assume a typical dt or skip prediction
-                # Or, if GPS is available, initialize EKF state with it
+            if self.last_update_time is None:
+                # Initialize with GPS if available
                 if telemetry.get('quality', {}).get('gps_valid', False) and \
                    'latitude_deg' in telemetry and 'longitude_deg' in telemetry and 'altitude_m' in telemetry:
-                    initial_ned_pos = self.ekf._gps_to_ned(
+                    initial_ned_pos = self._gps_to_ned(
                         telemetry['latitude_deg'], 
                         telemetry['longitude_deg'], 
                         telemetry['altitude_m']
                     )
-                    self.ekf = ExtendedKalmanFilter(initial_position=tuple(initial_ned_pos))
+                    # Re-initialize with GPS position
+                    self.state[0:3] = initial_ned_pos
                     logger.info(f"EKF initialized with GPS position: {initial_ned_pos}")
                 else:
-                     self.ekf = ExtendedKalmanFilter() # Default initialization
-                     logger.info("EKF initialized with default position (0,0,0).")
+                    logger.info("EKF initialized with default position (0,0,0).")
                 
-                self.initialized = True
-                dt = 1.0 / 10.0 # Assume 10Hz for the first step if no prior timestamp
+                self.last_update_time = current_timestamp_s
+                dt = 0.1  # Assume 10Hz for first step
             else:
-                dt = (current_timestamp_ns - self.last_timestamp_ns) / 1e9 # dt in seconds
+                dt = current_timestamp_s - self.last_update_time
+                logger.debug(f"Timestamp debug - Current: {current_timestamp_s:.6f}, Last: {self.last_update_time:.6f}, dt: {dt:.6f}")
             
             # Sanity check dt
-            if dt <= 0 or dt > 1.0: # If dt is non-positive or too large, could indicate issues
-                logger.warning(f"Unusual dt calculated: {dt:.4f}s. Using default 0.1s. Current_ts: {current_timestamp_ns}, last_ts: {self.last_timestamp_ns}")
-                dt = 0.1 # Fallback to a typical dt
+            if dt <= 0 or dt > 1.0:
+                logger.warning(f"Unusual dt calculated: {dt:.6f}s. Current_ts: {current_timestamp_s:.6f}, last_ts: {self.last_update_time:.6f}. Using default 0.1s.")
+                dt = 0.1
             
-            self.last_timestamp_ns = current_timestamp_ns
+            self.last_update_time = current_timestamp_s
             
-            measurement = SensorMeasurement(timestamp=current_time_obj.timestamp())
+            # Create measurement object
+            measurement = SensorMeasurement(timestamp=current_timestamp_s)
             
             if all(k in telemetry for k in ['accel_x_mps2', 'accel_y_mps2', 'accel_z_mps2']):
                 measurement.accel = np.array([
@@ -450,18 +470,25 @@ class KalmanFilterProcessor:
                     telemetry['latitude_deg'], telemetry['longitude_deg'], telemetry['altitude_m']
                 ])
             
-            if 'altitude_m' in telemetry: # Barometer altitude
+            if 'altitude_m' in telemetry:
                 measurement.baro_alt = telemetry['altitude_m']
 
-            if measurement.accel is not None and measurement.gyro is not None: # Basic check for IMU data
-                self.ekf.process_measurement(measurement, dt)
+            if all(k in telemetry for k in ['mag_x_uT', 'mag_y_uT', 'mag_z_uT']):
+                measurement.mag = np.array([
+                    telemetry['mag_x_uT'], telemetry['mag_y_uT'], telemetry['mag_z_uT']
+                ])
+                
+            # Process measurement if we have IMU data
+            if measurement.accel is not None and measurement.gyro is not None:
+                self.process_measurement(measurement, dt)
             else:
                 logger.debug("Skipping EKF process_measurement due to missing IMU data.")
 
-
-            state = self.ekf.get_state()
-            filter_health = self.ekf.check_filter_health()
+            # Get current state and health
+            state = self.get_state()
+            filter_health = self.check_filter_health()
             
+            # Add filtered state to telemetry
             telemetry['filtered_state'] = {
                 'position_ned': state['position_ned'],
                 'velocity_ned': state['velocity_ned'],
@@ -469,7 +496,7 @@ class KalmanFilterProcessor:
                 'vertical_velocity': state['vertical_velocity'],
                 'speed': state['speed'],
                 'quaternion': state['quaternion'],
-                'euler_angles_deg': np.degrees(state['euler_angles']).tolist(), # Convert rad to deg
+                'euler_angles_deg': np.degrees(state['euler_angles']).tolist(),
                 'filter_health': filter_health 
             }
             
@@ -478,11 +505,10 @@ class KalmanFilterProcessor:
                 logger.warning(f"EKF unhealthy: {filter_health}")
 
         except Exception as e:
-            logger.error(f"Error in KalmanFilterProcessor: {e}", exc_info=True)
-            telemetry['filtered_state'] = None # Indicate error or no data
+            logger.error(f"Error in EKF process_telemetry: {e}", exc_info=True)
+            telemetry['filtered_state'] = None
             telemetry['filter_error'] = str(e)
-            self.initialized = False # Attempt to re-initialize on next packet
-            self.last_timestamp_ns = None
+            self.last_update_time = None  # Reset for re-initialization
 
         return telemetry
 

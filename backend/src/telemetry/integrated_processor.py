@@ -3,7 +3,7 @@ Integrated Telemetry Processor combining Kalman Filter and Event Detection
 """
 import logging
 from typing import Dict, List
-from .kalman_filter import KalmanFilterProcessor
+from .kalman_filter import ExtendedKalmanFilter
 from .event_detector import EventDetectorProcessor
 
 logger = logging.getLogger(__name__)
@@ -14,10 +14,10 @@ class IntegratedTelemetryProcessor:
     """
     
     def __init__(self):
-        self.kalman_processor = KalmanFilterProcessor()
+        self.kalman_filter = ExtendedKalmanFilter()
         self.event_processor = EventDetectorProcessor()
         self.packet_count = 0
-        
+    
     def process_telemetry(self, telemetry: dict) -> dict:
         """
         Process telemetry with both Kalman filter and event detection
@@ -26,7 +26,7 @@ class IntegratedTelemetryProcessor:
         
         try:
             # Step 1: Apply Kalman filter to get filtered state
-            telemetry = self.kalman_processor.process_telemetry(telemetry)
+            telemetry = self.kalman_filter.process_telemetry(telemetry)
             
             # Step 2: Run event detection using both raw and filtered data
             telemetry = self.event_processor.process_telemetry(telemetry)
@@ -64,6 +64,6 @@ class IntegratedTelemetryProcessor:
     def reset_processors(self):
         """Reset both processors for new flight"""
         logger.info("Resetting telemetry processors")
-        self.kalman_processor = KalmanFilterProcessor()
+        self.kalman_filter = ExtendedKalmanFilter()
         self.event_processor = EventDetectorProcessor()
         self.packet_count = 0
