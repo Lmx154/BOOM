@@ -70,11 +70,32 @@ class ExtendedKalmanFilter:
         
         # Gravity vector (NED frame)
         self.gravity = np.array([0, 0, 9.81])
-          # Last update time
+        
+        # Reference coordinates (set from first GPS packet)
+        self.ref_lat = None  # Will be set from first GPS packet
+        self.ref_lon = None  # Will be set from first GPS packet  
+        self.ref_alt = None  # Will be set from first GPS packet
+        self.reference_initialized = False
+        
+        # Last update time
         self.last_update_time = None
         
         # Earth parameters
         self.earth_radius = 6371000  # meters
+        
+    def set_reference_coordinates(self, lat: float, lon: float, alt: float):
+        """
+        Set the reference coordinates for GPS-to-NED conversion from the first GPS packet.
+        This establishes the launch pad location as the origin of the NED coordinate system.
+        """
+        if not self.reference_initialized:
+            self.ref_lat = lat
+            self.ref_lon = lon
+            self.ref_alt = alt
+            self.reference_initialized = True
+            logger.info(f"Reference coordinates set from first GPS packet: lat={lat:.6f}, lon={lon:.6f}, alt={alt:.1f}")
+        else:
+            logger.debug("Reference coordinates already initialized, ignoring subsequent set attempt")
         
     def predict(self, dt: float):
         """
@@ -83,9 +104,6 @@ class ExtendedKalmanFilter:
         # Extract state components
         pos = self.state[0:3]
         vel = self.state[3:6]
-        # quat = self.state[6:10] # Not directly used in this simplified prediction
-        # gyro_bias = self.state[10:13] # Not directly used in this simplified prediction
-        # accel_bias_z = self.state[13] # Not directly used in this simplified prediction
         
         # State transition matrix F
         F = np.eye(15)
@@ -93,7 +111,6 @@ class ExtendedKalmanFilter:
         
         # Predict state
         self.state[0:3] = pos + vel * dt  # Update position
-        # Velocity prediction done in IMU update with acceleration
         
         # Update covariance
         self.P = F @ self.P @ F.T + self.Q * dt
@@ -107,8 +124,6 @@ class ExtendedKalmanFilter:
         """
         # Remove biases
         gyro_corrected = gyro - self.state[10:13]
-        # Correct full acceleration vector if biases for all axes were estimated
-        # For now, only Z-bias is in the state vector for accel
         accel_corrected_body = accel.copy()
         accel_corrected_body[2] -= self.state[13] # Correct Z-axis acceleration in body frame
         
@@ -124,19 +139,14 @@ class ExtendedKalmanFilter:
         # Update velocity using true acceleration in NED
         self.state[3:6] += true_accel_ned * dt
         
-        # Measurement update for acceleration (using raw accel and current orientation/bias estimates)
-        # Expected acceleration in body frame (gravity rotated into body frame + biases)
+        # Measurement update for acceleration
         g_body = self._rotate_vector(self.gravity, self._quaternion_conjugate(self.state[6:10]))
         expected_accel_body = g_body.copy()
         expected_accel_body[2] += self.state[13] # Add Z bias effect
 
-        y = accel - expected_accel_body # Innovation: measured accel - expected accel in body frame
+        y = accel - expected_accel_body # Innovation
         
         H = np.zeros((3, 15))
-        # Jacobian of expected_accel_body w.r.t quaternion (complex, simplified here)
-        # For a robust EKF, these partial derivatives need to be accurate.
-        # H[0:3, 6:10] = ... 
-        # Jacobian of expected_accel_body w.r.t accel_z_bias
         H[2, 13] = 1.0 # d(expected_accel_body_z)/d(baz) = 1
         
         S = H @ self.P @ H.T + self.R_accel
@@ -155,7 +165,20 @@ class ExtendedKalmanFilter:
         """
         Update with GPS measurements (low rate - 1Hz)
         """
-        ned_pos = self._gps_to_ned(lat, lon, alt)
+        # Set reference coordinates from first GPS packet if not already set
+        if not self.reference_initialized:
+            self.set_reference_coordinates(lat, lon, alt)
+            # For the first GPS packet, the position is exactly at the origin (0,0,0)
+            # since we just set this location as our reference
+            self.state[0:3] = np.array([0.0, 0.0, 0.0])
+            logger.info("Initialized EKF position to origin (0,0,0) from first GPS packet")
+            return
+        
+        try:
+            ned_pos = self._gps_to_ned(lat, lon, alt)
+        except ValueError as e:
+            logger.warning(f"Cannot convert GPS to NED: {e}")
+            return
         
         H = np.zeros((3, 15))
         H[0:3, 0:3] = np.eye(3)
@@ -184,7 +207,7 @@ class ExtendedKalmanFilter:
         y = altitude - z_expected
         
         S_scalar = H @ self.P @ H.T + self.R_baro 
-        if S_scalar <= 1e-9: # Avoid division by zero or very small number
+        if S_scalar <= 1e-9:
             logger.warning(f"Baro update S_scalar too small ({S_scalar}), skipping update.")
             return
 
@@ -198,12 +221,12 @@ class ExtendedKalmanFilter:
         Update with magnetometer measurement (for heading correction)
         """
         H = np.zeros((3, 15))
-        H[0:3, 6:9] = np.eye(3)  # Quaternion to rotate NED magnetic field to body frame
+        H[0:3, 6:9] = np.eye(3)
         
-        # Expected magnetic field in body frame (from current quaternion)
+        # Expected magnetic field in body frame
         mag_body_expected = self._rotate_vector(self.mag_ref_ned, self.state[6:10])
         
-        y = mag - mag_body_expected  # Innovation: measured mag - expected mag in body frame
+        y = mag - mag_body_expected
         
         S = H @ self.P @ H.T + self.R_mag
         try:
@@ -215,7 +238,7 @@ class ExtendedKalmanFilter:
         self.state += K @ y
         self.P = (np.eye(15) - K @ H) @ self.P
         
-        self.state[6:10] /= np.linalg.norm(self.state[6:10]) # Normalize quaternion
+        self.state[6:10] /= np.linalg.norm(self.state[6:10])
         
     def get_state(self) -> dict:
         """
@@ -233,9 +256,9 @@ class ExtendedKalmanFilter:
             'gyro_bias': self.state[10:13].copy().tolist(),
             'accel_z_bias': float(self.state[13]),
             'baro_bias': float(self.state[14]),
-            'altitude': float(-pos_ned[2]), # Altitude (m, positive up from NED 'down')
+            'altitude': float(-pos_ned[2]),
             'speed': float(np.linalg.norm(vel_ned)),
-            'vertical_velocity': float(-vel_ned[2]), # Vertical velocity (m/s, positive up from NED 'down' velocity)
+            'vertical_velocity': float(-vel_ned[2]),
             'covariance_diagonal': np.diag(self.P).copy().tolist()
         }
         
@@ -280,19 +303,21 @@ class ExtendedKalmanFilter:
         return np.array([roll, pitch, yaw])
         
     def _compute_rotation_jacobian(self, v: np.ndarray, q: np.ndarray) -> np.ndarray:
-        # This is a placeholder for the complex Jacobian calculation.
-        # A full EKF would require the analytical derivatives here.
-        # For simplicity in this example, we might rely more on process noise
-        # or use a simpler orientation update if this becomes a bottleneck.
-        # Returning zeros means this part of the measurement update for IMU (accel affecting quat) is simplified.
+        # Placeholder for complex Jacobian calculation
         return np.zeros((3, 4))
     
     def _gps_to_ned(self, lat: float, lon: float, alt: float) -> np.ndarray:
-        # Reference point (launch site - Starbase, Texas)
-        # Using Starbase coordinates to match simulator
-        ref_lat_rad = np.radians(25.997222)  # Starbase, Texas latitude
-        ref_lon_rad = np.radians(-97.155556)  # Starbase, Texas longitude
-        ref_alt = 8.0  # Starbase elevation
+        """
+        Convert GPS coordinates to NED (North-East-Down) coordinates relative to reference point.
+        The reference point is set from the first GPS packet received (launch pad location).
+        """
+        if not self.reference_initialized:
+            raise ValueError("Reference coordinates not set. Cannot convert GPS to NED.")
+            
+        # Use the dynamically set reference coordinates
+        ref_lat_rad = np.radians(self.ref_lat)
+        ref_lon_rad = np.radians(self.ref_lon)
+        ref_alt = self.ref_alt
 
         lat_rad = np.radians(lat)
         lon_rad = np.radians(lon)
@@ -320,7 +345,6 @@ class ExtendedKalmanFilter:
         dz = z_curr - z_ref
         
         # Rotation matrix from ECEF to NED
-        # (depends on the reference latitude and longitude)
         sin_lat_ref = np.sin(ref_lat_rad)
         cos_lat_ref = np.cos(ref_lat_rad)
         sin_lon_ref = np.sin(ref_lon_rad)
@@ -336,7 +360,7 @@ class ExtendedKalmanFilter:
         return ned_pos
 
     def process_measurement(self, measurement: SensorMeasurement, dt: float):
-        if dt <= 0: # Ensure dt is positive
+        if dt <= 0:
             logger.warning(f"Skipping EKF process_measurement due to non-positive dt: {dt}")
             return
 
@@ -346,7 +370,6 @@ class ExtendedKalmanFilter:
             self.update_imu(measurement.accel, measurement.gyro, dt)
         
         if measurement.gps_pos is not None:
-             # Ensure GPS data is valid before using (e.g. reasonable lat/lon values)
             if -90 <= measurement.gps_pos[0] <= 90 and \
                -180 <= measurement.gps_pos[1] <= 180:
                 self.update_gps(
@@ -381,15 +404,14 @@ class ExtendedKalmanFilter:
 
         if P_finite:
             try:
-                # Check positive definiteness only if P is finite and symmetric
                 if is_symmetric_np:
                     eigenvalues = np.linalg.eigvals(self.P)
-                    is_positive_definite_np = np.all(eigenvalues > 1e-12) # Use a small epsilon
+                    is_positive_definite_np = np.all(eigenvalues > 1e-12)
             except np.linalg.LinAlgError:
                 logger.warning("LinAlgError during eigenvalue decomposition for P.")
                 is_positive_definite_np = False
-        else: # P is not finite
-            is_symmetric_np = False # If not finite, symmetry check might be misleading
+        else:
+            is_symmetric_np = False
             is_positive_definite_np = False
 
         if state_finite:
@@ -398,7 +420,6 @@ class ExtendedKalmanFilter:
         
         is_healthy_np = state_finite and P_finite and is_symmetric_np and is_positive_definite_np and quaternion_normalized_np
         
-        # Ensure uncertainties are non-negative and handle potential NaNs from sqrt of negative
         pos_unc = np.sqrt(np.maximum(0, cov_diag[0:3])) if P_finite else np.array([-1.0, -1.0, -1.0])
         vel_unc = np.sqrt(np.maximum(0, cov_diag[3:6])) if P_finite else np.array([-1.0, -1.0, -1.0])
         max_unc_val = np.sqrt(np.maximum(0, np.max(cov_diag))) if P_finite and np.all(np.isfinite(cov_diag)) else -1.0
@@ -424,22 +445,11 @@ class ExtendedKalmanFilter:
             current_timestamp_s = current_time_obj.timestamp()
             
             if self.last_update_time is None:
-                # Initialize with GPS if available
-                if telemetry.get('quality', {}).get('gps_valid', False) and \
-                   'latitude_deg' in telemetry and 'longitude_deg' in telemetry and 'altitude_m' in telemetry:
-                    initial_ned_pos = self._gps_to_ned(
-                        telemetry['latitude_deg'], 
-                        telemetry['longitude_deg'], 
-                        telemetry['altitude_m']
-                    )
-                    # Re-initialize with GPS position
-                    self.state[0:3] = initial_ned_pos
-                    logger.info(f"EKF initialized with GPS position: {initial_ned_pos}")
-                else:
-                    logger.info("EKF initialized with default position (0,0,0).")
-                
+                # On first telemetry packet, just set the timestamp
+                # Reference coordinates will be set automatically when first GPS packet is processed
                 self.last_update_time = current_timestamp_s
                 dt = 0.1  # Assume 10Hz for first step
+                logger.info("EKF initialized - waiting for first GPS packet to set reference coordinates")
             else:
                 dt = current_timestamp_s - self.last_update_time
                 logger.debug(f"Timestamp debug - Current: {current_timestamp_s:.6f}, Last: {self.last_update_time:.6f}, dt: {dt:.6f}")
@@ -487,8 +497,7 @@ class ExtendedKalmanFilter:
             # Get current state and health
             state = self.get_state()
             filter_health = self.check_filter_health()
-            
-            # Add filtered state to telemetry
+              # Add filtered state to telemetry
             telemetry['filtered_state'] = {
                 'position_ned': state['position_ned'],
                 'velocity_ned': state['velocity_ned'],
@@ -497,7 +506,13 @@ class ExtendedKalmanFilter:
                 'speed': state['speed'],
                 'quaternion': state['quaternion'],
                 'euler_angles_deg': np.degrees(state['euler_angles']).tolist(),
-                'filter_health': filter_health 
+                'filter_health': filter_health,
+                # Include reference coordinates (launch pad location) if available
+                'reference_coordinates': {
+                    'lat': self.ref_lat,
+                    'lon': self.ref_lon,
+                    'alt': self.ref_alt
+                } if self.reference_initialized else None
             }
             
             # Log if filter is unhealthy

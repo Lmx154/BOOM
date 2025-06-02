@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import L, { Map, Marker, Polyline } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useTelemetryStore } from '../../stores/telemetry-store';
@@ -37,14 +37,23 @@ function GPSMap() {
   const marker = useRef<Marker | null>(null);
   const flightPath = useRef<Polyline | null>(null);
   const pathCoordinates = useRef<[number, number][]>([]);
-  
-  const { currentTelemetry } = useTelemetryStore();
+    const { currentTelemetry } = useTelemetryStore();
+
+  // Get launch site coordinates (prefer from Kalman filter, fallback to default)
+  const launchSiteCoords = useMemo(() => {
+    const refCoords = currentTelemetry?.filtered_state?.reference_coordinates;
+    if (refCoords) {
+      return [refCoords.lat, refCoords.lon] as [number, number];
+    }
+    // Fallback to default Starbase coordinates
+    return [25.997222, -97.155556] as [number, number];
+  }, [currentTelemetry?.filtered_state?.reference_coordinates]);
 
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;    // Initialize Leaflet map
     map.current = L.map(mapContainer.current, {
-      center: [25.997222, -97.155556], // Starbase, Texas (lat, lng)
+      center: launchSiteCoords,
       zoom: 12,
       zoomControl: true
     });
@@ -54,10 +63,8 @@ function GPSMap() {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
       subdomains: 'abcd',
       maxZoom: 19
-    }).addTo(map.current);
-
-    // Create rocket marker
-    marker.current = L.marker([28.396837, -80.605659], { icon: RocketIcon })
+    }).addTo(map.current);    // Create rocket marker (start at launch site coordinates)
+    marker.current = L.marker(launchSiteCoords, { icon: RocketIcon })
       .addTo(map.current)
       .bindPopup('Rocket Position');
 
@@ -74,7 +81,7 @@ function GPSMap() {
         map.current = null;
       }
     };
-  }, []);
+  }, [launchSiteCoords]);
 
   // Update position
   useEffect(() => {

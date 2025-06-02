@@ -58,6 +58,11 @@ export interface FilteredState {
   quaternion: [number, number, number, number];  // Orientation quaternion [w, x, y, z]
   euler_angles_deg: [number, number, number];    // Roll, pitch, yaw (degrees)
   filter_health: FilterHealth;
+  reference_coordinates?: {                // Launch pad location (from first GPS packet)
+    lat: number;                          // Reference latitude (degrees)
+    lon: number;                          // Reference longitude (degrees)
+    alt: number;                          // Reference altitude (meters)
+  } | null;
 }
 
 export interface FilterHealth {

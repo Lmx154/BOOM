@@ -1,6 +1,8 @@
 .telemetry-display {
   width: 100%;
   height: 100%;
+  overflow-y: auto;
+  padding: 1rem;
 }
 
 .no-data {
@@ -12,11 +14,23 @@
   font-size: 1.2rem;
 }
 
+.telemetry-section {
+  margin-bottom: 2rem;
+}
+
+.telemetry-section h3 {
+  margin: 0 0 1rem 0;
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  border-bottom: 1px solid #333;
+  padding-bottom: 0.5rem;
+}
+
 .telemetry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
 }
 
 .telemetry-card {
@@ -81,37 +95,189 @@
   font-size: 0.8rem;
 }
 
-.events-section {
-  margin-top: 2rem;
+/* Telemetry Controls */
+.telemetry-controls {
+  margin-bottom: 2rem;
 }
 
-.events-section h3 {
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-toggle {
+  background-color: #333;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.dropdown-toggle:hover {
+  background-color: #444;
+}
+
+.dropdown-content {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 1rem;
+  min-width: 400px;
+  max-height: 500px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  margin-top: 0.5rem;
+}
+
+.dropdown-header {
   margin-bottom: 1rem;
-  color: #888;
 }
 
-.events-list {
+.dropdown-header h4 {
+  margin: 0 0 0.75rem 0;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.bulk-actions button {
+  background-color: #444;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.bulk-actions button:hover {
+  background-color: #555;
+}
+
+.section-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.checkbox-group {
+  border: 1px solid #444;
+  border-radius: 6px;
+  padding: 1rem;
+  background-color: #1e1e1e;
+}
+
+.checkbox-group h5 {
+  margin: 0 0 0.75rem 0;
+  color: #ccc;
+  font-size: 1rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #444;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.checkbox-item:hover {
+  background-color: #333;
+}
+
+.checkbox-item input[type="checkbox"] {
+  margin-right: 0.75rem;
+  width: 16px;
+  height: 16px;
+  accent-color: #2196f3;
+}
+
+.checkbox-item span {
+  color: #ccc;
+  font-size: 0.9rem;
+}
+
+/* Phase History Styling */
+.phase-history {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.event-item {
-  background-color: #2a2a2a;
-  border-radius: 4px;
-  padding: 1rem;
+.phase-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  border: 1px solid #333;
+  gap: 1rem;
+  padding: 0.5rem;
+  background-color: #333;
+  border-radius: 4px;
+  border: 1px solid #444;
+}
+
+.phase-time {
+  color: #888;
+  font-size: 0.85rem;
+  min-width: 100px;
+}
+
+.phase-name {
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Events Styling */
+.events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.event-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem;
+  background-color: #333;
+  border-radius: 4px;
+  border: 1px solid #444;
 }
 
 .event-type {
+  color: #2196f3;
   font-weight: 500;
-  color: #4caf50;
+  min-width: 120px;
 }
 
 .event-time {
-  color: #666;
-  font-size: 0.9rem;
+  color: #888;
+  font-size: 0.85rem;
+  min-width: 100px;
+}
+
+.event-confidence {
+  color: #4caf50;
+  font-size: 0.85rem;
+  margin-left: auto;
 }

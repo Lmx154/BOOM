@@ -714,15 +714,30 @@ export default function TrajectoryVisualization() {
   const [cameraMode, setCameraMode] = useState<CameraMode>(CameraMode.FREE);
   const [maxAltitudeReached, setMaxAltitudeReached] = useState(0);
   const [mapTexture, setMapTexture] = useState<THREE.CanvasTexture | null>(null);  const [currentGeoCoverageWidth, setCurrentGeoCoverageWidth] = useState(2000); // Default 2km coverage
+  const [showLaunchPadModal, setShowLaunchPadModal] = useState(false);
+  const [manualLaunchCoords, setManualLaunchCoords] = useState<{lat: number, lng: number} | null>(null);
 
   const currentTelemetry = useTelemetryStore(state => state.currentTelemetry);
-  const missionTime = currentTelemetry?.mission_time || 0;
-
-  const launchSiteCoords = useMemo(() => ({ 
-    // Updated to match backend Kalman filter reference point (Starbase, Texas)
-    lat: 25.997222, 
-    lng: -97.155556 
-  }), []);  // Calculate rocket position for geographic calculations
+  const missionTime = currentTelemetry?.mission_time || 0;  const launchSiteCoords = useMemo(() => {
+    // 1. Use manual coordinates if set by user
+    if (manualLaunchCoords) {
+      return manualLaunchCoords;
+    }
+    
+    // 2. Use reference coordinates from Kalman filter if available
+    const refCoords = currentTelemetry?.filtered_state?.reference_coordinates;
+    if (refCoords) {
+      return { 
+        lat: refCoords.lat, 
+        lng: refCoords.lon 
+      };
+    }
+    
+    // 3. Fallback to default Starbase coordinates if reference not yet established
+    return { 
+      lat: 25.997222, 
+      lng: -97.155556    };
+  }, [manualLaunchCoords, currentTelemetry?.filtered_state?.reference_coordinates]);// Calculate rocket position for geographic calculations
   const rocketPositionUnscaled: [number, number, number] = useMemo(() => {
     if (!currentTelemetry) return [0, 0, 0];
     
@@ -826,6 +841,28 @@ export default function TrajectoryVisualization() {
           <strong>Max Altitude:</strong> {maxAltitudeReached.toFixed(1)}m
         </div>        <div style={{ marginBottom: '6px' }}>
           <strong>Launch Pad:</strong> {launchSiteCoords.lat.toFixed(5)}°N, {Math.abs(launchSiteCoords.lng).toFixed(5)}°W
+          {manualLaunchCoords ? 
+            <span style={{ fontSize: '10px', color: '#9C27B0', marginLeft: '8px' }}>✋ Manual</span> :
+            currentTelemetry?.filtered_state?.reference_coordinates ? 
+              <span style={{ fontSize: '10px', color: '#4CAF50', marginLeft: '8px' }}>✓ Dynamic</span> : 
+              <span style={{ fontSize: '10px', color: '#ff9800', marginLeft: '8px' }}>⚠ Default</span>
+          }
+          <button 
+            onClick={() => setShowLaunchPadModal(true)}
+            style={{
+              marginLeft: '8px',
+              padding: '2px 6px',
+              fontSize: '10px',
+              backgroundColor: '#2196F3',
+              color: 'white',
+              border: 'none',
+              borderRadius: '3px',
+              cursor: 'pointer'
+            }}
+            title="Set custom launch pad coordinates"
+          >
+            SET
+          </button>
         </div>
         <div style={{ marginBottom: '6px', fontSize: '11px', color: mapTexture ? '#4CAF50' : '#ff9800' }}>
           <strong>Map Texture:</strong> {mapTexture ? '✅ Loaded' : '⏳ Loading...'}
@@ -929,7 +966,134 @@ export default function TrajectoryVisualization() {
           <div><span style={{ color: '#0000ff', marginRight: '8px', fontSize: '16px' }}>●</span> Descent/Landing</div>
           <div><span style={{ color: '#888888', marginRight: '8px', fontSize: '16px' }}>●</span> Landed</div>
         </div>
-      </div>    </div>
+      </div>
+
+      {/* Launch Pad Coordinates Modal */}
+      {showLaunchPadModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: '#1e1e1e',
+            padding: '20px',
+            borderRadius: '8px',
+            border: '1px solid #333',
+            minWidth: '300px'
+          }}>
+            <h3 style={{ margin: '0 0 15px 0', color: '#fff' }}>Set Launch Pad Coordinates</h3>
+            
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>
+                Latitude (degrees):
+              </label>
+              <input
+                type="number"
+                step="0.000001"
+                defaultValue={launchSiteCoords.lat}
+                id="latitude-input"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  backgroundColor: '#333',
+                  border: '1px solid #555',
+                  borderRadius: '4px',
+                  color: '#fff'
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '5px', color: '#ccc' }}>
+                Longitude (degrees):
+              </label>
+              <input
+                type="number"
+                step="0.000001"
+                defaultValue={launchSiteCoords.lng}
+                id="longitude-input"
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  backgroundColor: '#333',
+                  border: '1px solid #555',
+                  borderRadius: '4px',
+                  color: '#fff'
+                }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowLaunchPadModal(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#666',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const latInput = document.getElementById('latitude-input') as HTMLInputElement;
+                  const lngInput = document.getElementById('longitude-input') as HTMLInputElement;
+                  
+                  const lat = parseFloat(latInput.value);
+                  const lng = parseFloat(lngInput.value);
+                  
+                  if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                    setManualLaunchCoords({ lat, lng });
+                    setShowLaunchPadModal(false);
+                  } else {
+                    alert('Please enter valid coordinates (Lat: -90 to 90, Lng: -180 to 180)');
+                  }
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#2196F3',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Set Coordinates
+              </button>
+              {manualLaunchCoords && (
+                <button
+                  onClick={() => {
+                    setManualLaunchCoords(null);
+                    setShowLaunchPadModal(false);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#ff5252',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Reset to Auto
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -9,12 +9,13 @@ class Settings(BaseSettings):
     HOST: str = "127.0.0.1"
     PORT: int = 8000
     DEBUG: bool = True
-    
-    # Serial settings
+      # Serial settings
     SERIAL_PORT: str = "auto"  # Use "auto" to auto-detect, or specify like "COM3" or "/dev/ttyUSB0"
     SERIAL_BAUDRATE: int = 921600
-    SERIAL_TIMEOUT: float = 0.1    # Simulator settings
-    USE_SIMULATOR: bool = True  # Enabled for testing
+    SERIAL_TIMEOUT: float = 0.1
+    
+    # Simulator settings
+    USE_SIMULATOR: bool = False  # Disabled by default, can be started manually via API
     SIMULATOR_PROFILE: str = "suborbital_hop"
     
     # System settings
