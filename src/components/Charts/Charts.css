@@ -1,32 +1,45 @@
+/* Professional Light Theme - Charts */
 .chart-container {
-  background-color: #2a2a2a;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  border-radius: var(--radius-sm);
   padding: 1.5rem;
-  border: 1px solid #333;
+  border: 1px solid var(--french-gray);
   height: 100%;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-light);
+  transition: all 0.3s ease;
+  font-family: var(--font-family);
+}
+
+.chart-container:hover {
+  border-color: var(--dark-slate-gray);
+  box-shadow: var(--shadow-medium);
 }
 
 .chart-container h3 {
   margin: 0 0 1rem 0;
-  color: #888;
+  color: var(--text-primary);
   font-size: 1.1rem;
-  font-weight: normal;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .custom-tooltip {
-  background-color: #2a2a2a !important;
-  border: 1px solid #333 !important;
-  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%) !important;
+  border: 1px solid var(--french-gray-2) !important;
+  border-radius: var(--radius-sm);
   padding: 12px;
-  color: #fff;
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-medium);
 }
 
 .tooltip-label {
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 8px;
-  color: #fff;
+  color: var(--text-primary);
 }
 
 .tooltip-section {
@@ -36,9 +49,9 @@
 .tooltip-section-title {
   font-size: 0.9rem;
   font-weight: 600;
-  color: #ccc;
+  color: var(--text-secondary);
   margin-bottom: 4px;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid var(--french-gray-2);
   padding-bottom: 2px;
 }
 
@@ -67,33 +80,40 @@
 }
 
 .dropdown-toggle {
-  background-color: #333;
-  border: 1px solid #444;
-  color: #fff;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  border: 2px solid var(--french-gray-2);
+  color: var(--midnight-green);
   padding: 0.5rem 1rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background-color 0.2s;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(4px);
+  box-shadow: var(--shadow-light);
 }
 
 .dropdown-toggle:hover {
-  background-color: #444;
+  background: rgba(255, 255, 255, 1);
+  border-color: var(--dark-slate-gray);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
 }
 
 .dropdown-menu {
   position: absolute;
   top: 100%;
   left: 0;
-  background-color: #2a2a2a;
-  border: 1px solid #444;
-  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+  border: 2px solid var(--french-gray-2);
+  border-radius: var(--radius-md);
   padding: 0.5rem;
   min-width: 300px;
   max-height: 400px;
   overflow-y: auto;
   z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-heavy);
+  backdrop-filter: blur(12px);
 }
 
 .metric-category {
@@ -101,12 +121,12 @@
 }
 
 .category-header {
-  font-weight: 600;
-  color: #ccc;
+  font-weight: 700;
+  color: var(--midnight-green);
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
   padding-bottom: 0.25rem;
-  border-bottom: 1px solid #444;
+  border-bottom: 2px solid var(--french-gray-2);
 }
 
 .metric-option {
@@ -115,17 +135,20 @@
   gap: 0.5rem;
   padding: 0.25rem 0;
   cursor: pointer;
-  color: #ddd;
+  color: var(--dark-slate-gray);
   font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.3s ease;
 }
 
 .metric-option:hover {
-  background-color: #333;
-  border-radius: 2px;
+  background-color: rgba(65, 97, 101, 0.1);
 }
 
 .metric-option input[type="checkbox"] {
   margin: 0;
+  accent-color: var(--midnight-green);
 }
 
 .metric-color-indicator {
@@ -133,6 +156,7 @@
   height: 12px;
   border-radius: 50%;
   flex-shrink: 0;
+  border: 1px solid var(--french-gray-2);
 }
 
 .metric-label {
@@ -140,23 +164,29 @@
 }
 
 .clear-button {
-  background-color: #f44336;
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
   border: none;
   color: white;
   padding: 0.5rem 1rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 0.9rem;
-  transition: background-color 0.2s;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-light);
 }
 
 .clear-button:hover:not(:disabled) {
-  background-color: #d32f2f;
+  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-medium);
 }
 
 .clear-button:disabled {
-  background-color: #666;
+  background: var(--french-gray);
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .selected-metrics {
@@ -171,12 +201,20 @@
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  background-color: #333;
-  border: 1px solid;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
+  border: 2px solid;
   padding: 0.25rem 0.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-sharp);
   font-size: 0.8rem;
-  color: #ddd;
+  font-weight: 600;
+  color: var(--dark-slate-gray);
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+}
+
+.selected-metric-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-light);
 }
 
 .metric-color-dot {
@@ -184,21 +222,23 @@
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .remove-metric {
   background: none;
   border: none;
-  color: #999;
+  color: var(--dark-slate-gray);
   cursor: pointer;
   font-size: 1rem;
   line-height: 1;
   padding: 0;
   margin-left: 0.25rem;
+  transition: color 0.3s ease;
 }
 
 .remove-metric:hover {
-  color: #fff;
+  color: var(--midnight-green);
 }
 
 .no-metrics-message {
@@ -206,9 +246,10 @@
   align-items: center;
   justify-content: center;
   height: 200px;
-  color: #666;
+  color: var(--dark-slate-gray);
   font-size: 1rem;
   font-style: italic;
+  font-weight: 500;
 }
 
 /* Chart grid styles for layout */

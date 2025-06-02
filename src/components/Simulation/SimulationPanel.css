@@ -1,7 +1,9 @@
+/* Professional Light Theme - Simulation Panel */
 .simulation-panel {
   padding: 20px;
   max-width: 800px;
   margin: 0 auto;
+  font-family: var(--font-family);
 }
 
 .simulation-header {
@@ -10,12 +12,14 @@
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid var(--dark-slate-gray);
 }
 
 .simulation-header h2 {
   margin: 0;
-  color: #fff;
+  color: var(--midnight-green);
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .simulator-status {
@@ -24,18 +28,22 @@
   gap: 8px;
   padding: 8px 16px;
   border-radius: 20px;
-  font-weight: bold;
+  font-weight: 700;
   font-size: 14px;
+  backdrop-filter: blur(4px);
+  box-shadow: var(--shadow-light);
 }
 
 .simulator-status.active {
-  background-color: #28a745;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
   color: white;
+  border: 2px solid #16a34a;
 }
 
 .simulator-status.inactive {
-  background-color: #6c757d;
-  color: white;
+  background: linear-gradient(135deg, var(--french-gray) 0%, var(--french-gray-2) 100%);
+  color: var(--midnight-green);
+  border: 2px solid var(--french-gray-2);
 }
 
 .status-indicator {
@@ -44,6 +52,7 @@
   border-radius: 50%;
   background-color: currentColor;
   animation: pulse 2s infinite;
+  box-shadow: 0 0 8px currentColor;
 }
 
 @keyframes pulse {

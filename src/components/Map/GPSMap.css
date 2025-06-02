@@ -1,18 +1,29 @@
+/* Professional Light Theme - GPS Map */
 .gps-map-container {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #1a1a1a;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  border: 2px solid var(--french-gray);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-light);
+  font-family: var(--font-family);
+  transition: all 0.3s ease;
+}
+
+.gps-map-container:hover {
+  border-color: var(--dark-slate-gray);
+  box-shadow: var(--shadow-medium);
 }
 
 .map-info {
   display: flex;
   justify-content: space-around;
   padding: 12px;
-  background: #2a2a2a;
-  border-bottom: 1px solid #404040;
+  background: linear-gradient(135deg, var(--french-gray) 0%, var(--french-gray-2) 100%);
+  border-bottom: 2px solid var(--dark-slate-gray);
 }
 
 .info-item {
@@ -24,18 +35,20 @@
 
 .info-item .label {
   font-size: 0.8rem;
-  color: #888;
-  font-weight: 500;
+  color: var(--dark-slate-gray);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .info-item .value {
   font-size: 1rem;
-  font-weight: 600;
-  color: #fff;
+  font-weight: 700;
+  color: var(--midnight-green);
 }
 
 .info-item .value.valid {
-  color: #4CAF50;
+  color: #22c55e;
 }
 
 .info-item .value.invalid {
@@ -51,21 +64,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #1a1a1a;
-  border: 2px dashed #404040;
+  background: linear-gradient(135deg, var(--lavender-web) 0%, rgba(217, 219, 241, 0.8) 100%);
+  border: 2px dashed var(--french-gray-2);
+  border-radius: var(--radius-md);
+  margin: 1rem;
 }
 
 .placeholder-content {
   text-align: center;
-  color: #888;
+  color: var(--dark-slate-gray);
+  padding: 2rem;
 }
 
 .placeholder-content h3 {
   margin: 0 0 8px 0;
-  color: #fff;
+  color: var(--midnight-green);
+  font-weight: 700;
 }
 
 .placeholder-content p {
   margin: 4px 0;
   font-size: 0.9rem;
+  font-weight: 500;
 }

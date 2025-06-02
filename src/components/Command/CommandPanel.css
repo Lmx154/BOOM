@@ -1,26 +1,38 @@
+/* Professional Light Theme - Command Panel */
 .command-panel {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2rem;
   height: 100%;
+  font-family: var(--font-family);
 }
 
 .command-section,
 .history-section {
-  background-color: #2a2a2a;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
-  border: 1px solid #333;
+  border: 2px solid var(--french-gray);
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-light);
+  transition: all 0.3s ease;
+}
+
+.command-section:hover,
+.history-section:hover {
+  border-color: var(--dark-slate-gray);
+  box-shadow: var(--shadow-medium);
 }
 
 .command-section h3,
 .history-section h3 {
   margin: 0 0 1.5rem 0;
-  color: #888;
+  color: var(--midnight-green);
   font-size: 1.1rem;
-  font-weight: normal;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .command-grid {
@@ -31,12 +43,12 @@
 
 .command-button {
   padding: 1rem;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background-color: #333;
-  color: white;
-  font-weight: 500;
-  transition: all 0.2s;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--french-gray-2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
+  color: var(--midnight-green);
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
   display: flex;
@@ -44,26 +56,33 @@
   align-items: center;
   gap: 0.25rem;
   min-height: 80px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  box-shadow: var(--shadow-light);
 }
 
 .command-button:hover:not(:disabled) {
-  background-color: #444;
-  border-color: #555;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 1);
+  border-color: var(--dark-slate-gray);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-medium);
 }
 
 .command-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 .command-button.dangerous {
   border-color: #f44336;
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(255, 255, 255, 0.6) 100%);
 }
 
 .command-button.dangerous:hover:not(:disabled) {
-  background-color: #f44336;
-  border-color: #f44336;
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  border-color: #d32f2f;
+  color: white;
 }
 
 .command-button.sending::after {
@@ -73,7 +92,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(11, 57, 72, 0.3), transparent);
   animation: sending 1s infinite;
 }
 
@@ -84,19 +103,21 @@
 
 .command-label {
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .requires-params {
   font-size: 0.7rem;
-  color: #ffa726;
-  opacity: 0.8;
+  color: #f59e0b;
+  opacity: 0.9;
+  font-weight: 600;
 }
 
 .danger-indicator {
   font-size: 0.7rem;
   color: #f44336;
   opacity: 0.9;
+  font-weight: 600;
 }
 
 .history-list {
@@ -108,22 +129,32 @@
 }
 
 .history-item {
-  background-color: #222;
-  border-radius: 4px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0.5) 100%);
+  border-radius: var(--radius-md);
   padding: 1rem;
-  border: 1px solid #333;
+  border: 2px solid var(--french-gray);
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+}
+
+.history-item:hover {
+  border-color: var(--dark-slate-gray);
+  box-shadow: var(--shadow-light);
 }
 
 .history-item.success {
-  border-color: #4caf50;
+  border-color: #22c55e;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(255, 255, 255, 0.5) 100%);
 }
 
 .history-item.error {
   border-color: #f44336;
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(255, 255, 255, 0.5) 100%);
 }
 
 .history-item.timeout {
-  border-color: #ff9800;
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(255, 255, 255, 0.5) 100%);
 }
 
 .history-header {
@@ -134,24 +165,27 @@
 }
 
 .command-name {
-  font-weight: 500;
-  color: #fff;
+  font-weight: 600;
+  color: var(--midnight-green);
 }
 
 .command-time {
   font-size: 0.8rem;
-  color: #666;
+  color: var(--dark-slate-gray);
+  font-weight: 500;
 }
 
 .history-response {
   font-size: 0.9rem;
-  color: #888;
+  color: var(--dark-slate-gray);
+  font-weight: 500;
 }
 
 .no-history {
   text-align: center;
-  color: #666;
+  color: var(--dark-slate-gray);
   padding: 2rem;
+  font-weight: 500;
 }
 
 @media (max-width: 1024px) {

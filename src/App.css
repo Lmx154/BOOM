@@ -1,26 +1,69 @@
+/* Professional Light Theme Color Palette */
+:root {
+  --lavender-web: #d9dbf1;
+  --french-gray: #d0cdd7;
+  --french-gray-2: #acb0bd;
+  --dark-slate-gray: #416165;
+  --midnight-green: #0b3948;
+  
+  /* Font */
+  --font-family: 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  
+  /* Shadows */
+  --shadow-light: 0 1px 3px rgba(11, 57, 72, 0.12);
+  --shadow-medium: 0 4px 12px rgba(11, 57, 72, 0.15);
+  --shadow-heavy: 0 8px 24px rgba(11, 57, 72, 0.2);
+    /* Border radius - Sharp professional edges */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  
+  /* Text colors */
+  --text-primary: #000000;
+  --text-secondary: #333333;
+  --text-muted: #666666;
+}
+
+* {
+  font-family: var(--font-family);
+}
+
 .app {
   width: 100%;
   height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: var(--lavender-web);
 }
 
 .app-header {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  background: linear-gradient(135deg, var(--midnight-green) 0%, var(--dark-slate-gray) 100%);
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 2px solid #333;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid var(--french-gray-2);
+  box-shadow: var(--shadow-medium);
+  position: relative;
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--french-gray), transparent);
 }
 
 .app-header h1 {
   margin: 0;
-  color: #fff;
+  color: var(--lavender-web);
   font-size: 1.8rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .connection-status {
@@ -28,27 +71,32 @@
   align-items: center;
   gap: 0.75rem;
   font-size: 0.95rem;
-  color: #ccc;
-  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--lavender-web);
+  background-color: rgba(217, 219, 241, 0.1);
   padding: 0.5rem 1rem;
-  border-radius: 6px;
-  border: 1px solid #444;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(217, 219, 241, 0.2);
+  backdrop-filter: blur(4px);
+  font-weight: 500;
 }
 
 .status-indicator {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #666;
+  background-color: var(--french-gray-2);
+  box-shadow: var(--shadow-light);
 }
 
 .status-indicator.connected {
-  background-color: #4caf50;
+  background-color: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
 }
 
 .status-indicator.connecting {
-  background-color: #ff9800;
+  background-color: #f59e0b;
   animation: pulse 1s infinite;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
 }
 
 .status-indicator.error {
@@ -62,26 +110,31 @@
 }
 
 .app-nav {
-  background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+  background: linear-gradient(135deg, var(--french-gray) 0%, var(--french-gray-2) 100%);
   padding: 0.75rem 2rem;
   display: flex;
-  gap: 0.5rem;
-  border-bottom: 1px solid #444;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--dark-slate-gray);
   overflow-x: auto;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-light);
+  backdrop-filter: blur(8px);
 }
 
 .app-nav button {
-  background-color: transparent;
+  background-color: rgba(255, 255, 255, 0.7);
   border: 1px solid transparent;
-  color: #bbb;
-  padding: 0.75rem 1.25rem;
-  border-radius: 6px;
-  transition: all 0.3s ease;
+  color: var(--midnight-green);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.95rem;
   position: relative;
   overflow: hidden;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  backdrop-filter: blur(4px);
 }
 
 .app-nav button::before {
@@ -91,15 +144,16 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.5s;
+  background: linear-gradient(90deg, transparent, rgba(11, 57, 72, 0.1), transparent);
+  transition: left 0.5s ease;
 }
 
 .app-nav button:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.08);
-  border-color: #555;
-  transform: translateY(-1px);
+  color: var(--midnight-green);
+  background-color: rgba(255, 255, 255, 0.9);
+  border-color: var(--dark-slate-gray);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
 }
 
 .app-nav button:hover::before {
@@ -108,15 +162,18 @@
 
 .app-nav button.active {
   color: white;
-  background: linear-gradient(135deg, #4a9eff 0%, #0084ff 100%);
-  border-color: #0084ff;
-  box-shadow: 0 3px 8px rgba(0, 132, 255, 0.3);
+  background: linear-gradient(135deg, var(--dark-slate-gray) 0%, var(--midnight-green) 100%);
+  border-color: var(--midnight-green);
+  box-shadow: var(--shadow-heavy);
+  transform: translateY(-1px);
 }
 
 .app-main {
   flex: 1;
   padding: 2rem;
   overflow: auto;
+  background: linear-gradient(135deg, var(--lavender-web) 0%, rgba(217, 219, 241, 0.8) 100%);
+  min-height: 0;
 }
 
 .charts-grid {
@@ -173,4 +230,212 @@
   .charts-grid-enhanced > :nth-child(3) {
     grid-column: auto;
   }
+}
+
+/* FlexLayout Professional Light Theme Integration */
+/* Override FlexLayout CSS custom properties for light theme */
+.flexlayout__layout {
+  /* FlexLayout color variable overrides */
+  --color-text: #000000 !important;
+  --color-tab-selected: #000000 !important;
+  --color-tab-unselected: #333333 !important;
+  --color-tabset-header: #000000 !important;
+  --color-tab-textbox: #000000 !important;
+  --color-background: #ffffff !important;
+  --color-1: rgba(217, 219, 241, 0.9) !important;
+  --color-2: rgba(208, 205, 215, 0.9) !important;
+  --color-3: rgba(172, 176, 189, 0.9) !important;
+  --color-4: rgba(65, 97, 101, 0.3) !important;
+  
+  background: var(--lavender-web) !important;
+  font-family: var(--font-family) !important;
+}
+
+.flexlayout__splitter {
+  background: var(--french-gray-2) !important;
+  transition: background-color 0.3s ease !important;
+}
+
+.flexlayout__splitter:hover {
+  background: var(--dark-slate-gray) !important;
+}
+
+.flexlayout__tabset {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%) !important;
+  border: 1px solid var(--french-gray) !important;
+  border-radius: var(--radius-sm) !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: var(--shadow-light) !important;
+}
+
+.flexlayout__tabset:hover {
+  border-color: var(--dark-slate-gray) !important;
+  box-shadow: var(--shadow-medium) !important;
+}
+
+.flexlayout__tab {
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1px solid var(--french-gray) !important;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+  color: var(--midnight-green) !important;
+  font-weight: 600 !important;
+  margin-right: 2px !important;
+  backdrop-filter: blur(4px) !important;
+  transition: all 0.3s ease !important;
+}
+
+.flexlayout__tab:hover {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-color: var(--dark-slate-gray) !important;
+  color: var(--midnight-green) !important;
+  transform: translateY(-1px) !important;
+}
+
+.flexlayout__tab--selected {
+  background: linear-gradient(135deg, var(--dark-slate-gray) 0%, var(--midnight-green) 100%) !important;
+  color: white !important;
+  border-color: var(--midnight-green) !important;
+  box-shadow: var(--shadow-medium) !important;
+}
+
+.flexlayout__tab_button {
+  color: inherit !important;
+  font-family: var(--font-family) !important;
+  font-weight: inherit !important;
+  letter-spacing: 0.3px !important;
+}
+
+.flexlayout__tab_button_trailing {
+  color: inherit !important;
+  opacity: 0.8 !important;
+  transition: all 0.3s ease !important;
+}
+
+.flexlayout__tab_button_trailing:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-radius: 50% !important;
+}
+
+.flexlayout__tabset_content {
+  background: transparent !important;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important;
+  overflow: hidden !important;
+}
+
+.flexlayout__tabset_header {
+  background: linear-gradient(135deg, var(--french-gray) 0%, var(--french-gray-2) 100%) !important;
+  border-bottom: 1px solid var(--dark-slate-gray) !important;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
+  padding: 0.5rem !important;
+}
+
+.flexlayout__border {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%) !important;
+  border: 1px solid var(--french-gray) !important;
+  border-radius: var(--radius-sm) !important;
+  backdrop-filter: blur(8px) !important;
+  box-shadow: var(--shadow-light) !important;
+}
+
+.flexlayout__border_inner {
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm) !important;
+}
+
+/* Ensure Dashboard components inherit the theme */
+.dashboard-component {
+  background: transparent !important;
+  height: 100% !important;
+  font-family: var(--font-family) !important;
+}
+
+.flex-component-wrapper {
+  height: 100% !important;
+  background: transparent !important;
+  padding: 1rem !important;
+}
+
+/* Additional FlexLayout text color overrides */
+.flexlayout__tab_button * {
+  color: inherit !important;
+}
+
+.flexlayout__tab:not(.flexlayout__tab--selected) .flexlayout__tab_button {
+  color: var(--midnight-green) !important;
+}
+
+.flexlayout__tab--selected .flexlayout__tab_button {
+  color: white !important;
+}
+
+.flexlayout__tabset_header_content {
+  color: var(--midnight-green) !important;
+}
+
+/* Ensure text in tab buttons is always visible */
+.flexlayout__tab_button_textbox {
+  color: inherit !important;
+}
+
+/* Force all tab text to be black for unselected tabs */
+.flexlayout__tab:not(.flexlayout__tab--selected) {
+  color: #000000 !important;
+}
+
+.flexlayout__tab:not(.flexlayout__tab--selected) * {
+  color: #000000 !important;
+}
+
+/* Force selected tab text to be white */
+.flexlayout__tab--selected {
+  color: #ffffff !important;
+}
+
+.flexlayout__tab--selected * {
+  color: #ffffff !important;
+}
+
+/* Aggressive FlexLayout tab text color fixes */
+/* Force all tab text to be black with maximum specificity */
+.flexlayout__layout .flexlayout__tab .flexlayout__tab_button,
+.flexlayout__layout .flexlayout__tab .flexlayout__tab_button_leading,
+.flexlayout__layout .flexlayout__tab .flexlayout__tab_button_textbox,
+.flexlayout__layout .flexlayout__tab_button,
+.flexlayout__layout .flexlayout__tab_button_leading,
+.flexlayout__layout .flexlayout__tab_button_textbox,
+div.flexlayout__tab .flexlayout__tab_button,
+div.flexlayout__tab .flexlayout__tab_button_leading,
+div.flexlayout__tab .flexlayout__tab_button_textbox,
+.flexlayout__tab span,
+.flexlayout__tab div,
+.flexlayout__tab_button span,
+.flexlayout__tab_button div {
+  color: #000000 !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+/* Force selected tab text to be white for contrast */
+.flexlayout__layout .flexlayout__tab--selected .flexlayout__tab_button,
+.flexlayout__layout .flexlayout__tab--selected .flexlayout__tab_button_leading,
+.flexlayout__layout .flexlayout__tab--selected .flexlayout__tab_button_textbox,
+div.flexlayout__tab--selected .flexlayout__tab_button,
+div.flexlayout__tab--selected .flexlayout__tab_button_leading,
+div.flexlayout__tab--selected .flexlayout__tab_button_textbox,
+.flexlayout__tab--selected span,
+.flexlayout__tab--selected div,
+.flexlayout__tab--selected .flexlayout__tab_button span,
+.flexlayout__tab--selected .flexlayout__tab_button div {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Additional global overrides for any missed elements */
+[class*="flexlayout__tab"] {
+  color: #000000 !important;
+}
+
+[class*="flexlayout__tab"][class*="--selected"] {
+  color: #ffffff !important;
 }

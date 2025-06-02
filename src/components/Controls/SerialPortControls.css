@@ -1,26 +1,40 @@
+/* Professional Light Theme - Serial Port Controls */
 .serial-port-controls {
   padding: 20px;
-  background: #1e1e1e;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+  border-radius: var(--radius-lg);
   margin-bottom: 20px;
+  border: 2px solid var(--french-gray);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-light);
+  font-family: var(--font-family);
+  transition: all 0.3s ease;
+}
+
+.serial-port-controls:hover {
+  border-color: var(--dark-slate-gray);
+  box-shadow: var(--shadow-medium);
 }
 
 .serial-port-controls h3 {
-  color: #ffffff;
+  color: var(--midnight-green);
   margin-bottom: 15px;
   font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 .simulator-warning {
-  background: #ffa500;
+  background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
   color: #000;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   margin-bottom: 15px;
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
+  box-shadow: var(--shadow-light);
 }
 
 .serial-controls-row {
@@ -33,52 +47,69 @@
 .serial-port-select {
   flex: 1;
   padding: 8px 12px;
-  background: #2d2d2d;
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #ffffff;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid var(--french-gray-2);
+  border-radius: var(--radius-sm);
+  color: var(--midnight-green);
   font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
 }
 
 .serial-port-select:focus {
   outline: none;
-  border-color: #0078d4;
+  border-color: var(--dark-slate-gray);
+  box-shadow: var(--shadow-light);
+  background: rgba(255, 255, 255, 1);
 }
 
 .serial-controls-row button {
   padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.2s;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-light);
 }
 
 .btn-primary {
-  background: #0078d4;
+  background: linear-gradient(135deg, var(--dark-slate-gray) 0%, var(--midnight-green) 100%);
   color: white;
+  border-color: var(--midnight-green);
 }
 
 .btn-primary:hover {
-  background: #106ebe;
+  background: linear-gradient(135deg, var(--midnight-green) 0%, #083240 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
 }
 
 .btn-secondary {
-  background: #6c757d;
-  color: white;
+  background: linear-gradient(135deg, var(--french-gray) 0%, var(--french-gray-2) 100%);
+  color: var(--midnight-green);
+  border-color: var(--french-gray-2);
 }
 
 .btn-secondary:hover {
-  background: #5a6268;
+  background: linear-gradient(135deg, var(--french-gray-2) 0%, var(--dark-slate-gray) 100%);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
 }
 
 .btn-danger {
-  background: #dc3545;
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
   color: white;
+  border-color: #d32f2f;
 }
 
 .btn-danger:hover {
-  background: #c82333;
+  background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-medium);
 }
 
 .btn-primary:disabled,
@@ -86,47 +117,55 @@
 .btn-danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: var(--shadow-light);
 }
 
 .serial-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #ffffff;
+  color: var(--midnight-green);
   font-size: 14px;
+  font-weight: 600;
 }
 
 .status-indicator {
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  box-shadow: var(--shadow-light);
 }
 
 .status-indicator.connected {
-  background: #28a745;
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
 }
 
 .status-indicator.disconnected {
-  background: #dc3545;
+  background: #f44336;
+  box-shadow: 0 0 8px rgba(244, 67, 54, 0.4);
 }
 
 .error-message {
-  color: #dc3545;
+  color: #f44336;
   font-size: 14px;
+  font-weight: 600;
   margin-top: 10px;
   padding: 8px;
-  background: rgba(220, 53, 69, 0.1);
-  border-radius: 4px;
-  border-left: 3px solid #dc3545;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid #f44336;
+  backdrop-filter: blur(4px);
 }
 
 .loading-spinner {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid #444;
+  border: 2px solid var(--french-gray-2);
   border-radius: 50%;
-  border-top-color: #0078d4;
+  border-top-color: var(--midnight-green);
   animation: spin 1s ease-in-out infinite;
 }
 
@@ -135,38 +174,43 @@
 }
 
 .recommended-port {
-  background: rgba(40, 167, 69, 0.2) !important;
-  color: #28a745 !important;
+  background: rgba(34, 197, 94, 0.2) !important;
+  color: #22c55e !important;
+  font-weight: 600 !important;
 }
 
 .port-recommendations {
   margin-top: 20px;
   padding: 15px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--french-gray);
+  backdrop-filter: blur(4px);
 }
 
 .port-recommendations h4 {
-  color: #ffffff;
+  color: var(--midnight-green);
   margin-bottom: 10px;
   font-size: 1rem;
+  font-weight: 700;
 }
 
 .port-result {
   padding: 8px;
   margin: 5px 0;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
+  font-weight: 600;
 }
 
 .port-result.recommended {
-  background: rgba(40, 167, 69, 0.2);
-  color: #28a745;
-  border-left: 3px solid #28a745;
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  border-left: 3px solid #22c55e;
 }
 
 .port-result.not-recommended {
-  background: rgba(108, 117, 125, 0.2);
-  color: #6c757d;
-  border-left: 3px solid #6c757d;
+  background: rgba(172, 176, 189, 0.2);
+  color: var(--dark-slate-gray);
+  border-left: 3px solid var(--french-gray-2);
 }
