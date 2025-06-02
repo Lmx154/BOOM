@@ -25,7 +25,7 @@
 
 .command-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 1rem;
 }
 
@@ -39,6 +39,11 @@
   transition: all 0.2s;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 80px;
 }
 
 .command-button:hover:not(:disabled) {
@@ -75,6 +80,23 @@
 @keyframes sending {
   0% { left: -100%; }
   100% { left: 100%; }
+}
+
+.command-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.requires-params {
+  font-size: 0.7rem;
+  color: #ffa726;
+  opacity: 0.8;
+}
+
+.danger-indicator {
+  font-size: 0.7rem;
+  color: #f44336;
+  opacity: 0.9;
 }
 
 .history-list {

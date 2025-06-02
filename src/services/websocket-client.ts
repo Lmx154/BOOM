@@ -52,11 +52,17 @@ class WebSocketClient {
               console.log('Received event:', message.data);
               this.eventCallbacks.forEach(cb => cb(message.data));
               break;
-              
-            case 'command_response':
-              const response = message.data as CommandResponse;
+                case 'command_response':
+              const messageWithId = message as any; // Cast to access id and response
+              const response = messageWithId.response as CommandResponse;
+              const commandId = messageWithId.id;
               console.log('Received command response:', response);
-              // Handle command responses
+              
+              // Find and call the matching command callback
+              if (commandId && this.commandCallbacks.has(commandId)) {
+                const callback = this.commandCallbacks.get(commandId)!;
+                callback(response);
+              }
               break;
           }
         } catch (error) {

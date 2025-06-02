@@ -17,35 +17,41 @@ class SerialManager:
         self.writer: Optional[asyncio.StreamWriter] = None
         self.is_connected = False
         self.port = None
-    
-    async def connect(self, port: str = "auto") -> bool:
+        self.baudrate = None
+
+    async def connect(self, port: str = "auto", baudrate: int = None) -> bool:
         """
         Connect to serial port.
         
         Args:
             port: Serial port name or "auto" for auto-detection
+            baudrate: Baud rate for connection (defaults to settings.SERIAL_BAUDRATE)
             
         Returns:
             True if connected successfully
         """
         try:
+            # Use default baudrate if not provided
+            if baudrate is None:
+                baudrate = settings.SERIAL_BAUDRATE
+                
             # Auto-detect port if requested
             if port == "auto":
                 port = self._auto_detect_port()
                 if not port:
                     logger.error("No serial port found")
                     return False
-            
-            # Open serial connection
+              # Open serial connection
             self.reader, self.writer = await serial_asyncio.open_serial_connection(
                 url=port,
-                baudrate=settings.SERIAL_BAUDRATE,
+                baudrate=baudrate,
                 timeout=settings.SERIAL_TIMEOUT
             )
             
             self.port = port
+            self.baudrate = baudrate
             self.is_connected = True
-            logger.info(f"Connected to serial port {port}")
+            logger.info(f"Connected to serial port {port} at {baudrate} baud")
             return True
             
         except Exception as e:
@@ -68,7 +74,7 @@ class SerialManager:
             return ports[0].device
         
         return None
-    
+
     async def read_packet(self) -> Optional[str]:
         """
         Read a packet from serial port.
@@ -78,14 +84,13 @@ class SerialManager:
         """
         if not self.is_connected or not self.reader:
             return None
-        
+            
         try:
             # Read until newline or timeout
             data = await asyncio.wait_for(
                 self.reader.readline(),
                 timeout=settings.SERIAL_TIMEOUT
             )
-            
             if data:
                 # Decode and return
                 packet = data.decode('utf-8', errors='ignore').strip()
@@ -127,7 +132,7 @@ class SerialManager:
         except Exception as e:
             logger.error(f"Error sending command: {e}")
             return False
-    
+
     async def close(self):
         """Close serial connection."""
         if self.writer:
@@ -137,4 +142,6 @@ class SerialManager:
         self.is_connected = False
         self.reader = None
         self.writer = None
+        self.port = None
+        self.baudrate = None
         logger.info("Serial connection closed")
