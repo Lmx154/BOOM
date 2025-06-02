@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { wsClient } from './services/websocket-client';
 import { useTelemetryStore } from './stores/telemetry-store';
-import TelemetryDisplay from './components/TelemetryDisplay/TelemetryDisplay';
+import Dashboard from './components/Dashboard/Dashboard';
 import UnifiedChart from './components/Charts/UnifiedChart';
 import CommandPanel from './components/Command/CommandPanel';
 import GPSMap from './components/Map/GPSMap';
@@ -12,7 +12,7 @@ import { SerialPortControls } from './components/Controls/SerialPortControls';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'telemetry' | 'charts' | '3d' | 'trajectory' | 'map' | 'command' | 'controls' | 'simulation'>('telemetry');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'charts' | '3d' | 'trajectory' | 'map' | 'command' | 'controls' | 'simulation'>('dashboard');
   const connectionStatus = useTelemetryStore((state) => state.connectionStatus);
   const setConnectionStatus = useTelemetryStore((state) => state.setConnectionStatus);
   const updateTelemetry = useTelemetryStore((state) => state.updateTelemetry);
@@ -56,14 +56,12 @@ function App() {
           <span className={`status-indicator ${connectionStatus}`}></span>
           {connectionStatus}
         </div>
-      </header>
-
-      <nav className="app-nav">
+      </header>      <nav className="app-nav">
         <button 
-          className={activeTab === 'telemetry' ? 'active' : ''}
-          onClick={() => setActiveTab('telemetry')}
+          className={activeTab === 'dashboard' ? 'active' : ''}
+          onClick={() => setActiveTab('dashboard')}
         >
-          Telemetry
+          Dashboard
         </button>
         <button 
           className={activeTab === 'charts' ? 'active' : ''}
@@ -106,7 +104,9 @@ function App() {
           Simulation
         </button>
       </nav>      <main className="app-main">
-        {activeTab === 'telemetry' && <TelemetryDisplay />}        {activeTab === 'charts' && <UnifiedChart />}{activeTab === '3d' && <RocketOrientation />}
+        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'charts' && <UnifiedChart />}
+        {activeTab === '3d' && <RocketOrientation />}
         {activeTab === 'trajectory' && <Trajectory3D />}
         {activeTab === 'map' && <GPSMap />}
         {activeTab === 'command' && <CommandPanel />}
